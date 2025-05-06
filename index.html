@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Sunset - Screen Share</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root {
       --sunset-orange: #ff7e5f;
@@ -22,21 +23,21 @@
     }
 
     body {
-      background: linear-gradient(135deg, var(--discord-darkest), var(--discord-darker));
+      background: var(--discord-darkest);
       color: var(--text-primary);
       min-height: 100vh;
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
-      padding: 40px 20px;
+      padding: 20px;
       text-align: center;
     }
 
     h1 {
-      font-size: 2.5rem;
-      margin-bottom: 1.5rem;
+      font-size: 2rem;
+      margin-bottom: 1rem;
       background: linear-gradient(45deg, var(--sunset-orange), var(--sunset-purple));
       -webkit-background-clip: text;
       background-clip: text;
@@ -44,13 +45,15 @@
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .controls {
+    .connection-panel {
       background: var(--discord-dark);
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      margin: 20px 0;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
     #my-id {
@@ -60,121 +63,337 @@
       background: var(--discord-darker);
       padding: 8px 12px;
       border-radius: 6px;
-      display: inline-block;
-      margin: 10px 0;
     }
 
     input {
       background: var(--discord-darker);
       border: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--text-primary);
-      padding: 12px 16px;
-      border-radius: 8px;
-      width: 300px;
-      font-size: 1rem;
-      transition: all 0.2s ease;
+      padding: 8px 12px;
+      border-radius: 6px;
+      width: 200px;
+      font-size: 0.9rem;
     }
 
     input:focus {
       outline: none;
       border-color: var(--sunset-orange);
-      box-shadow: 0 0 0 2px rgba(255, 126, 95, 0.2);
     }
 
-    button {
-      background: linear-gradient(45deg, var(--sunset-orange), var(--sunset-purple));
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-size: 0.9rem;
-    }
-
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(255, 126, 95, 0.3);
-    }
-
-    button:active {
-      transform: translateY(0);
+    .video-container {
+      position: relative;
+      width: 100%;
+      margin: 0 auto;
+      background: var(--discord-darkest);
+      border-radius: 12px;
+      overflow: hidden;
     }
 
     #shared-screen {
-      width: 90%;
-      max-width: 1200px;
+      width: 100%;
+      display: block;
       border-radius: 12px;
-      margin: 20px auto;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      background: var(--discord-darkest);
+    }
+
+    .controls-overlay {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 20px;
+      border-radius: 50px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .control-button {
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      padding: 8px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      position: relative;
+    }
+
+    .control-button:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .control-button.active {
+      color: #ff4444;
+    }
+
+    .control-button.active:hover {
+      background: rgba(255, 68, 68, 0.1);
+    }
+
+    .control-button.danger {
+      color: #ff4444;
+    }
+
+    .control-button.danger:hover {
+      background: rgba(255, 68, 68, 0.1);
+    }
+
+    .control-button .icon {
+      font-size: 18px;
+    }
+
+    .control-button .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      margin-bottom: 5px;
+    }
+
+    .control-button:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .control-button .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px;
+      border-style: solid;
+      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+    }
+
+    .settings-menu {
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      background: var(--discord-dark);
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      display: none;
+      z-index: 1000;
+    }
+
+    .settings-menu.active {
+      display: block;
+    }
+
+    .settings-menu::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      right: 10px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: var(--discord-dark) transparent transparent transparent;
+    }
+
+    .settings-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      color: var(--text-primary);
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .settings-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-item i {
+      width: 16px;
+      text-align: center;
     }
 
     @media (max-width: 768px) {
       .container {
-        padding: 20px 10px;
+        padding: 10px;
+      }
+
+      .connection-panel {
+        flex-direction: column;
       }
 
       input {
         width: 100%;
-        margin-bottom: 10px;
       }
 
-      button {
-        width: 100%;
-        margin: 5px 0;
+      .controls-overlay {
+        width: 90%;
+        justify-content: space-around;
       }
+    }
 
-      #shared-screen {
-        width: 100%;
-      }
+    .text-button {
+      background: var(--sunset-orange);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .text-button:hover {
+      background: #ff6b4d;
+      transform: translateY(-1px);
+    }
+
+    .text-button:active {
+      transform: translateY(0);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>PeerJS Screen Share</h1>
+    <h1>Sunset - Screen Share</h1>
 
-    <div class="controls">
-      <p><strong>Your ID:</strong> <span id="my-id"></span></p>
+    <div class="connection-panel">
+      <span id="my-id"></span>
       <input type="text" id="remote-id" placeholder="Remote Peer ID" />
-      <button id="connect">Connect</button>
-      <button id="share-screen">Share Screen</button>
+      <button id="connect" class="text-button">Entrar na chamada</button>
     </div>
 
-    <video id="shared-screen" autoplay playsinline></video>
+    <div class="video-container">
+      <video id="shared-screen" autoplay playsinline></video>
+      <div class="controls-overlay">
+        <button id="toggle-mic" class="control-button" title="Mute/Unmute Microphone">
+          <i class="fas fa-microphone icon"></i>
+          <span class="tooltip">Mute Microphone</span>
+        </button>
+        <button id="share-screen" class="control-button" title="Share Screen">
+          <i class="fas fa-desktop icon"></i>
+          <span class="tooltip">Share Screen</span>
+        </button>
+        <button id="stop-sharing" class="control-button danger" title="Stop Sharing" style="display: none;">
+          <i class="fas fa-stop icon"></i>
+          <span class="tooltip">Stop Sharing</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script>
+    // Initialize all DOM elements
     const myIdDisplay = document.getElementById("my-id");
     const remoteIdInput = document.getElementById("remote-id");
     const sharedScreen = document.getElementById("shared-screen");
+    const toggleMicButton = document.getElementById("toggle-mic");
+    const shareScreenButton = document.getElementById("share-screen");
+    const stopSharingButton = document.getElementById("stop-sharing");
+    const connectButton = document.getElementById("connect");
 
+    // Initialize state variables
     const peer = new Peer();
-
     let localStream = null;
     let currentCall = null;
+    let isMicMuted = true; // Start muted
 
-    peer.on("open", id => {
-      myIdDisplay.textContent = id;
-    });
+    // Set initial microphone state
+    toggleMicButton.classList.add('active');
+    toggleMicButton.querySelector('.icon').className = 'fas fa-microphone-slash icon';
+    toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
 
-    document.getElementById("connect").onclick = () => {
-      alert("Now click 'Share Screen' to start the call.");
-    };
+    // Microphone toggle function
+    function toggleMicrophone() {
+      const micIcon = toggleMicButton.querySelector('.icon');
+      
+      // If we don't have a stream yet, try to get one
+      if (!localStream) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+            localStream = stream;
+            toggleMicrophoneState();
+          })
+          .catch(err => {
+            console.error('Error getting microphone:', err);
+            alert('Could not access microphone');
+          });
+      } else {
+        toggleMicrophoneState();
+      }
+    }
 
-    document.getElementById("share-screen").onclick = async () => {
+    function toggleMicrophoneState() {
+      const micIcon = toggleMicButton.querySelector('.icon');
+      const audioTracks = localStream.getAudioTracks();
+      
+      audioTracks.forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      
+      isMicMuted = !isMicMuted;
+      toggleMicButton.classList.toggle('active', isMicMuted);
+      
+      // Update icon and tooltip
+      if (isMicMuted) {
+        micIcon.className = 'fas fa-microphone-slash icon';
+        toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
+      } else {
+        micIcon.className = 'fas fa-microphone icon';
+        toggleMicButton.querySelector('.tooltip').textContent = 'Mute Microphone';
+      }
+    }
+
+    // Share screen function
+    async function shareScreen() {
       try {
-        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        // First get user media for audio
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Then get display media for screen sharing
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ 
+          video: true,
+          audio: true
+        });
+
+        // Combine both streams
+        localStream = new MediaStream([
+          ...displayStream.getVideoTracks(),
+          ...audioStream.getAudioTracks()
+        ]);
+
+        // Mute the microphone by default
+        const audioTracks = localStream.getAudioTracks();
+        audioTracks.forEach(track => {
+          track.enabled = false;
+        });
+        isMicMuted = true;
+        const micIcon = toggleMicButton.querySelector('.icon');
+        micIcon.className = 'fas fa-microphone-slash icon';
+        toggleMicButton.classList.add('active');
+        toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
 
         // Show the shared screen
         sharedScreen.srcObject = localStream;
-        sharedScreen.play();
+        await sharedScreen.play();
 
         const remoteId = remoteIdInput.value.trim();
         if (!remoteId) {
@@ -185,14 +404,51 @@
         const call = peer.call(remoteId, localStream);
         currentCall = call;
 
+        // Update UI
+        shareScreenButton.style.display = 'none';
+        stopSharingButton.style.display = 'flex';
+
         call.on("close", () => {
           console.log("Call closed.");
+          stopSharing();
         });
+
+        // Handle stream end
+        displayStream.getVideoTracks()[0].onended = () => {
+          stopSharing();
+        };
+
       } catch (err) {
         console.error("Error sharing screen:", err);
         alert("Screen sharing failed: " + err.message);
       }
-    };
+    }
+
+    // Stop sharing function
+    function stopSharing() {
+      if (currentCall) {
+        currentCall.close();
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      sharedScreen.srcObject = null;
+      shareScreenButton.style.display = 'flex';
+      stopSharingButton.style.display = 'none';
+    }
+
+    // Event listeners
+    toggleMicButton.addEventListener('click', toggleMicrophone);
+    shareScreenButton.addEventListener('click', shareScreen);
+    stopSharingButton.addEventListener('click', stopSharing);
+    connectButton.addEventListener('click', () => {
+      alert("Now click 'Share Screen' to start the call.");
+    });
+
+    // PeerJS event handlers
+    peer.on("open", id => {
+      myIdDisplay.textContent = id;
+    });
 
     peer.on("call", incomingCall => {
       incomingCall.answer(); // No stream needed for receiver
@@ -201,6 +457,16 @@
         sharedScreen.play();
       });
     });
+
+    // Cleanup on page unload
+    window.onbeforeunload = () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      if (currentCall) {
+        currentCall.close();
+      }
+    };
   </script>
 </body>
 </html>

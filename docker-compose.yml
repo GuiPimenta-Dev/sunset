@@ -1,0 +1,27 @@
+services:
+  livekit:
+    image: livekit/livekit-server
+    command: ["--dev", "--keys=devkey:secret", "--bind=0.0.0.0:7880", "--node-ip=0.0.0.0", "--port=7880", "--udp-port=7882"]
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    networks:
+      - livekit-network
+
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
+      LIVEKIT_WS_URL: ws://livekit:7880
+    networks:
+      - livekit-network
+    depends_on:
+      - livekit
+
+networks:
+  livekit-network:
+    driver: bridge 

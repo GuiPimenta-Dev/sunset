@@ -1,100 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sunset - Screen Share</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
   <style>
     :root {
-      --sunset-orange: #ff7e5f;
-      --sunset-purple: #feb47b;
-      --discord-dark: #36393f;
-      --discord-darker: #2f3136;
-      --discord-darkest: #202225;
       --text-primary: #ffffff;
-      --text-secondary: #b9bbbe;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      --text-secondary: rgba(255, 255, 255, 0.7);
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2a2a2a;
+      --accent-color: #ff7e5f;
     }
 
     body {
-      background: var(--discord-darkest);
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background: var(--bg-primary);
       color: var(--text-primary);
-      min-height: 100vh;
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 20px;
-      text-align: center;
     }
 
     h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-      background: linear-gradient(45deg, var(--sunset-orange), var(--sunset-purple));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .connection-panel {
-      background: var(--discord-dark);
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    #my-id {
-      color: var(--sunset-orange);
-      font-weight: bold;
-      font-family: 'Consolas', monospace;
-      background: var(--discord-darker);
-      padding: 8px 12px;
-      border-radius: 6px;
-    }
-
-    input {
-      background: var(--discord-darker);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
       color: var(--text-primary);
-      padding: 8px 12px;
-      border-radius: 6px;
-      width: 200px;
-      font-size: 0.9rem;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--sunset-orange);
+      margin-bottom: 30px;
     }
 
     .video-container {
       position: relative;
       width: 100%;
-      margin: 0 auto;
-      background: var(--discord-darkest);
+      background: var(--bg-secondary);
       border-radius: 12px;
       overflow: hidden;
+      margin-bottom: 20px;
     }
 
     #shared-screen {
       width: 100%;
-      display: block;
-      border-radius: 12px;
+      max-height: 80vh;
+      background: #000;
     }
 
     .controls-overlay {
@@ -102,31 +55,27 @@
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.8);
-      padding: 10px 20px;
-      border-radius: 50px;
       display: flex;
-      gap: 10px;
-      align-items: center;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      z-index: 100;
+      gap: 12px;
+      padding: 8px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
     }
 
     .control-button {
       background: transparent;
       border: none;
       color: var(--text-primary);
-      padding: 8px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       cursor: pointer;
-      transition: all 0.2s ease;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 40px;
-      height: 40px;
-      position: relative;
+      transition: all 0.2s ease;
     }
 
     .control-button:hover {
@@ -134,40 +83,28 @@
     }
 
     .control-button.active {
-      color: #ff4444;
-    }
-
-    .control-button.active:hover {
-      background: rgba(255, 68, 68, 0.1);
-    }
-
-    .control-button.danger {
-      color: #ff4444;
-    }
-
-    .control-button.danger:hover {
-      background: rgba(255, 68, 68, 0.1);
+      background: var(--accent-color);
     }
 
     .control-button .icon {
       font-size: 18px;
     }
 
-    .control-button .tooltip {
+    .tooltip {
       position: absolute;
       bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
+      padding: 4px 8px;
       background: rgba(0, 0, 0, 0.8);
       color: white;
-      padding: 5px 10px;
-      border-radius: 4px;
       font-size: 12px;
+      border-radius: 4px;
       white-space: nowrap;
       opacity: 0;
       visibility: hidden;
       transition: all 0.2s ease;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
     }
 
     .control-button:hover .tooltip {
@@ -175,100 +112,121 @@
       visibility: visible;
     }
 
-    .control-button .tooltip::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border-width: 5px;
-      border-style: solid;
-      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+    .danger {
+      color: #ff4444;
     }
 
-    .settings-menu {
-      position: absolute;
-      bottom: 100%;
-      right: 0;
-      background: var(--discord-dark);
-      border-radius: 8px;
-      padding: 8px;
-      margin-bottom: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      display: none;
-      z-index: 1000;
+    .danger:hover {
+      background: rgba(255, 68, 68, 0.1);
     }
 
-    .settings-menu.active {
-      display: block;
-    }
-
-    .settings-menu::after {
-      content: '';
-      position: absolute;
-      bottom: -5px;
-      right: 10px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: var(--discord-dark) transparent transparent transparent;
-    }
-
-    .settings-item {
+    /* Timer e participantes */
+    #call-timer {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      color: var(--text-primary);
-      cursor: pointer;
-      border-radius: 4px;
-      white-space: nowrap;
-    }
-
-    .settings-item:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .settings-item i {
-      width: 16px;
-      text-align: center;
-    }
-
-    @media (max-width: 768px) {
-      .container {
-        padding: 10px;
-      }
-
-      .connection-panel {
-        flex-direction: column;
-      }
-
-      input {
-        width: 100%;
-      }
-
-      .controls-overlay {
-        width: 90%;
-        justify-content: space-around;
-      }
-    }
-
-    .text-button {
-      background: var(--sunset-orange);
-      color: white;
-      border: none;
-      padding: 8px 16px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      padding: 6px 16px;
       border-radius: 6px;
+      font-size: 15px;
+      font-family: monospace;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+    }
+
+    #participants-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-left: 16px;
+    }
+
+    #participants-avatars {
+      display: flex;
+      gap: 6px;
+    }
+
+    .participant-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    }
+
+    #participants-count {
+      color: #fff;
+      font-size: 12px;
+      margin-top: 2px;
+      font-family: monospace;
+    }
+
+    /* Gravação */
+    #record-reminder {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      background: rgba(255, 126, 95, 0.92);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 6px;
+      z-index: 2001;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+      max-width: 260px;
+      align-items: center;
+      display: none;
+    }
+
+    #dismiss-reminder {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 15px;
       cursor: pointer;
-      font-weight: 500;
+      padding: 0 4px;
+      line-height: 1;
+      margin-left: 8px;
+    }
+
+    /* Room UI */
+    .room-ui {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 40px;
+    }
+
+    .room-input {
+      padding: 12px 20px;
+      font-size: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      width: 300px;
+      max-width: 100%;
+    }
+
+    .room-button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent-color);
+      color: white;
+      cursor: pointer;
       transition: all 0.2s ease;
     }
 
-    .text-button:hover {
-      background: #ff6b4d;
-      transform: translateY(-1px);
+    .room-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 126, 95, 0.3);
     }
 
-    .text-button:active {
+    .room-button:active {
       transform: translateY(0);
     }
 
@@ -332,7 +290,7 @@
       padding: 4px;
       display: flex;
       align-items: center;
-      gap:0;
+      gap: 0;
       flex-wrap: nowrap;
       min-height: 40px;
     }
@@ -455,252 +413,101 @@
       margin-left: 4px;
     }
 
-    .EasyMDEContainer .editor-toolbar {
-      background: var(--discord-darker);
-      border: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 4px;
+    /* New styles for participant avatars */
+    .participant-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      min-height: 40px;
-      gap: 4px;
-    }
-
-    .EasyMDEContainer .editor-toolbar .format-group {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      border-right: 1px solid rgba(255, 255, 255, 0.1);
-      padding-right: 4px;
-    }
-
-    .EasyMDEContainer .editor-toolbar .format-group:last-child {
-      border-right: none;
-      padding-right: 0;
-    }
-
-    .EasyMDEContainer .editor-toolbar button {
-      color: var(--text-secondary);
-      border: none;
-      background: transparent;
-      padding: 4px;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-      position: relative;
-      font-size: 14px;
-      display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 24px;
-      height: 24px;
+      margin: 0 -4px;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 1;
     }
 
-    .EasyMDEContainer .editor-toolbar button:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
+    .participant-avatar:hover {
+      transform: scale(1.1) translateY(-2px);
+      z-index: 2;
     }
 
-    .EasyMDEContainer .editor-toolbar button.active {
-      background: var(--sunset-orange);
-      color: white;
+    #participants-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-left: 16px;
     }
 
-    .EasyMDEContainer .editor-toolbar button::after {
-      content: attr(title);
-      position: absolute;
-      bottom: -25px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
+    #participants-avatars {
+      display: flex;
+      gap: 2px;
+      padding: 4px;
+      transition: all 0.3s ease;
+    }
+
+    #participants-count {
+      color: #fff;
       font-size: 12px;
-      white-space: nowrap;
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.2s ease;
-      z-index: 1000;
+      margin-top: 4px;
+      font-family: monospace;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
-    .EasyMDEContainer .editor-toolbar button:hover::after {
-      opacity: 1;
-      visibility: visible;
+    .notes-preview.active {
+      display: block;
     }
 
-    .EasyMDEContainer .CodeMirror {
-      height: 100%;
-      background: var(--discord-dark);
-      color: var(--text-primary);
-      border: none;
-      font-size: 14px;
-      line-height: 1.6;
-      padding: 16px;
-    }
-
-    .EasyMDEContainer .CodeMirror-cursor {
-      border-left: 2px solid var(--sunset-orange);
-    }
-
-    .EasyMDEContainer .CodeMirror-selected {
-      background: rgba(255, 126, 95, 0.2);
-    }
-
-    .EasyMDEContainer .CodeMirror-focused .CodeMirror-selected {
-      background: rgba(255, 126, 95, 0.3);
-    }
-
-    .EasyMDEContainer .CodeMirror .cm-header-1 {
-      font-size: 2em;
-      color: var(--sunset-orange);
-    }
-
-    .EasyMDEContainer .CodeMirror .cm-header-2 {
-      font-size: 1.5em;
-      color: var(--sunset-purple);
-    }
-
-    .EasyMDEContainer .CodeMirror .cm-header-3 {
-      font-size: 1.2em;
-      color: var(--text-primary);
-    }
-
-    .EasyMDEContainer .CodeMirror .cm-quote {
-      color: #8b9cb3;
-      font-style: italic;
-      border-left: 3px solid var(--sunset-orange);
-      padding-left: 10px;
-    }
-
-    .EasyMDEContainer .editor-preview {
-      background: var(--discord-dark);
-      color: var(--text-primary);
-      padding: 20px;
-    }
-
-    .EasyMDEContainer .editor-preview h1 {
+    .notes-preview h1 {
       color: var(--sunset-orange);
       font-size: 2em;
       margin-bottom: 0.5em;
     }
 
-    .EasyMDEContainer .editor-preview h2 {
+    .notes-preview h2 {
       color: var(--sunset-purple);
       font-size: 1.5em;
       margin-bottom: 0.5em;
     }
 
-    .EasyMDEContainer .editor-preview h3 {
-      color: var(--text-primary);
-      font-size: 1.2em;
-      margin-bottom: 0.5em;
-    }
-
-    .EasyMDEContainer .editor-preview blockquote {
-      border-left: 3px solid var(--sunset-orange);
-      padding-left: 10px;
-      color: #8b9cb3;
-      font-style: italic;
-      margin: 1em 0;
-    }
-
-    .EasyMDEContainer .editor-preview ul, 
-    .EasyMDEContainer .editor-preview ol {
-      margin: 1em 0;
-      padding-left: 2em;
-    }
-
-    .EasyMDEContainer .editor-preview a {
+    .notes-preview strong {
       color: var(--sunset-orange);
-      text-decoration: none;
     }
 
-    .EasyMDEContainer .editor-preview a:hover {
-      text-decoration: underline;
+    .notes-preview em {
+      color: var(--sunset-purple);
     }
 
-    .EasyMDEContainer .editor-preview-side {
-      background: var(--discord-dark);
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    .notes-panel.fullscreen {
+      width: 100%;
+      right: 0;
     }
 
-    .EasyMDEContainer .editor-preview-side .editor-preview {
-      padding: 20px;
-    }
-
-    .EasyMDEContainer .editor-preview-active-side {
-      background: var(--discord-dark);
-    }
-
-    .EasyMDEContainer .editor-preview-active {
-      background: var(--discord-dark);
-    }
-
-    /* CSS for drag handle */
-    .notes-drag-handle {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 6px;
-      height: 100%;
-      cursor: ew-resize;
-      z-index: 1001;
-      background: transparent;
-      transition: background 0.2s;
-    }
-    .notes-drag-handle:hover {
-      background: rgba(255,255,255,0.08);
-    }
-    .notes-panel {
-      resize: none !important;
-      min-width: 280px;
-      max-width: 100vw;
-    }
-    .notes-panel .editor-toolbar .toolbar-button {
-      background-color: transparent !important;
-      box-shadow: none;
-      border-radius: 6px;
-      color: var(--text-secondary);
-      padding: 4px; /* Garante que padding seja fixo */
-      transition: box-shadow 0.2s ease, color 0.2s ease;
-    }
-    
-    .notes-panel .editor-toolbar .toolbar-button:hover {
-      background-color: transparent !important;
-      box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
-      color: var(--text-primary);
-    }
-
-    #record.active, #record.recording {
-      background: #ff4444 !important;
-      color: #fff !important;
-    }
-    #record.active .icon, #record.recording .icon {
-      color: #fff !important;
+    .notes-header .toolbar-button {
+      margin-left: 4px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Sunset - Screen Share</h1>
+    <h1>Sunset</h1>
 
-    <div class="connection-panel">
-      <span id="my-id"></span>
-      <input type="text" id="remote-id" placeholder="Remote Peer ID" style="display: none;">
-      <button id="connect" class="text-button" style="display: none;">Entrar na chamada</button>
+    <!-- Room UI -->
+    <div id="room-ui" class="room-ui">
+      <input type="text" id="room-input" class="room-input" placeholder="Digite o nome da sala">
+      <button id="join-room" class="room-button">Entrar na Sala</button>
     </div>
 
-    <div class="video-container">
+    <!-- Video Container (inicialmente oculto) -->
+    <div id="video-container" class="video-container" style="display: none;">
       <video id="shared-screen" autoplay playsinline></video>
       <div class="controls-overlay">
         <button id="toggle-mic" class="control-button" title="Mute/Unmute Microphone">
           <i class="fas fa-microphone icon"></i>
           <span class="tooltip">Mute Microphone</span>
-        </button>
-        <button id="notes" class="control-button" title="Open Notes">
-          <i class="fas fa-sticky-note icon"></i>
-          <span class="tooltip">Open Notes</span>
         </button>
         <button id="share-screen" class="control-button" title="Share Screen">
           <i class="fas fa-desktop icon"></i>
@@ -710,594 +517,610 @@
           <i class="fas fa-stop icon"></i>
           <span class="tooltip">Stop Sharing</span>
         </button>
-        <button id="leave-call" class="control-button danger" style="background:#ff4444;color:white;" title="Sair da chamada">
+        <button id="record" class="control-button" title="Start Recording">
+          <i class="fas fa-circle icon"></i>
+          <span class="tooltip">Start Recording</span>
+        </button>
+        <button id="notes" class="control-button" title="Open Notes">
+          <i class="fas fa-sticky-note icon"></i>
+          <span class="tooltip">Open Notes</span>
+        </button>
+        <button id="leave-room" class="control-button danger" style="background:#ff4444;color:white;" title="Leave Room">
           <i class="fas fa-phone-slash icon"></i>
-          <span class="tooltip">Sair da chamada</span>
+          <span class="tooltip">Leave Room</span>
         </button>
+      </div>
+    </div>
+
+    <!-- Notes Component -->
+    <div class="notes-panel">
+      <div class="notes-drag-handle"></div>
+      <div class="notes-header">
+        <span class="notes-title">Notes</span>
+        <div>
+          <button class="toolbar-button" title="Visualizar" onclick="togglePreview()">
+            <i class="fa fa-eye"></i>
+          </button>
+          <button class="toolbar-button" title="Tela Cheia" onclick="toggleFullscreen()">
+            <i class="fa fa-expand"></i>
+          </button>
+          <button class="notes-close" title="Close Notes">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="notes-content">
+        <div class="editor-toolbar">
+          <button class="toolbar-button" title="Título Principal" onclick="formatText('# ')">
+            <i class="fa fa-header"></i>
+          </button>
+          <button class="toolbar-button" title="Subtítulo" onclick="formatText('## ')">
+            <i class="fa fa-header fa-sm"></i>
+          </button>
+          <button class="toolbar-button" title="Negrito" onclick="formatText('**', '**')">
+            <i class="fa fa-bold"></i>
+          </button>
+          <button class="toolbar-button" title="Itálico" onclick="formatText('*', '*')">
+            <i class="fa fa-italic"></i>
+          </button>
+          <button class="toolbar-button" title="Lista não ordenada" onclick="formatText('- ')">
+            <i class="fa fa-list-ul"></i>
+          </button>
+          <button class="toolbar-button" title="Lista ordenada" onclick="formatText('1. ')">
+            <i class="fa fa-list-ol"></i>
+          </button>
+          <button class="toolbar-button" title="Lista de tarefas" onclick="formatText('- [ ] ')">
+            <i class="fa fa-tasks"></i>
+          </button>
+          <button class="toolbar-button" title="Link" onclick="formatText('[', '](url)')">
+            <i class="fa fa-link"></i>
+          </button>
+          <button class="toolbar-button" title="Imagem" onclick="formatText('![', '](url)')">
+            <i class="fa fa-image"></i>
+          </button>
+          <button class="toolbar-button" title="Citação" onclick="formatText('> ')">
+            <i class="fa fa-quote-left"></i>
+          </button>
+          <button class="toolbar-button" title="Código" onclick="formatText('`', '`')">
+            <i class="fa fa-code"></i>
+          </button>
+          <button class="toolbar-button" title="Bloco de código" onclick="formatText('```\n', '\n```')">
+            <i class="fa fa-file-code"></i>
+          </button>
+          <button class="toolbar-button" title="Linha horizontal" onclick="formatText('\n---\n')">
+            <i class="fa fa-minus"></i>
+          </button>
+        </div>
+        <div class="editor-area">
+          <textarea id="markdown-editor" class="markdown-editor" placeholder="Anote aqui os tópicos importantes da reunião..."></textarea>
+          <div id="markdown-preview" class="markdown-preview"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="notes-panel">
-    <div class="notes-drag-handle"></div>
-    <div class="notes-header">
-      <span class="notes-title">Notes</span>
-      <div>
-        <button class="toolbar-button" title="Visualizar" onclick="togglePreview()">
-          <i class="fa fa-eye"></i>
-        </button>
-        <button class="toolbar-button" title="Tela Cheia" onclick="toggleFullscreen()">
-          <i class="fa fa-expand"></i>
-        </button>
-        <button class="notes-close" title="Close Notes">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-    </div>
-    <div class="notes-content">
-      <div class="editor-toolbar">
-        <button class="toolbar-button" title="Título Principal" onclick="formatText('# ')">
-          <i class="fa fa-header"></i>
-        </button>
-        <button class="toolbar-button" title="Subtítulo" onclick="formatText('## ')">
-          <i class="fa fa-header fa-sm"></i>
-        </button>
-        <button class="toolbar-button" title="Negrito" onclick="formatText('**', '**')">
-          <i class="fa fa-bold"></i>
-        </button>
-        <button class="toolbar-button" title="Itálico" onclick="formatText('*', '*')">
-          <i class="fa fa-italic"></i>
-        </button>
-        <button class="toolbar-button" title="Lista não ordenada" onclick="formatText('- ')">
-          <i class="fa fa-list-ul"></i>
-        </button>
-        <button class="toolbar-button" title="Lista ordenada" onclick="formatText('1. ')">
-          <i class="fa fa-list-ol"></i>
-        </button>
-        <button class="toolbar-button" title="Lista de tarefas" onclick="formatText('- [ ] ')">
-          <i class="fa fa-tasks"></i>
-        </button>
-        <button class="toolbar-button" title="Link" onclick="formatText('[', '](url)')">
-          <i class="fa fa-link"></i>
-        </button>
-        <button class="toolbar-button" title="Imagem" onclick="formatText('![', '](url)')">
-          <i class="fa fa-image"></i>
-        </button>
-        <button class="toolbar-button" title="Citação" onclick="formatText('> ')">
-          <i class="fa fa-quote-left"></i>
-        </button>
-        <button class="toolbar-button" title="Código" onclick="formatText('`', '`')">
-          <i class="fa fa-code"></i>
-        </button>
-        <button class="toolbar-button" title="Bloco de código" onclick="formatText('```\n', '\n```')">
-          <i class="fa fa-file-code"></i>
-        </button>
-        <button class="toolbar-button" title="Linha horizontal" onclick="formatText('\n---\n')">
-          <i class="fa fa-minus"></i>
-        </button>
-      </div>
-      <div class="editor-area">
-        <textarea id="markdown-editor" class="markdown-editor" placeholder="Anote aqui os tópicos importantes da reunião..."></textarea>
-        <div id="markdown-preview" class="markdown-preview"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Top left: timer + participants -->
+  <!-- Timer -->
   <div style="display:flex;align-items:flex-start;position:fixed;top:18px;left:18px;z-index:2000;">
-    <div id="call-timer" style="display:flex;align-items:center;background:rgba(0,0,0,0.7);color:#fff;padding:6px 16px;border-radius:6px;font-size:15px;font-family:monospace;letter-spacing:1px;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
+    <div id="call-timer">
       <button id="timer-toggle" style="background:none;border:none;color:white;font-size:16px;cursor:pointer;margin-right:8px;outline:none;">
         <i id="timer-toggle-icon" class="fa fa-play"></i>
       </button>
       <span id="timer-text">00:00:00</span>
     </div>
-    <div id="participants-container" style="display:flex;flex-direction:column;align-items:center;margin-left:16px;">
-      <div id="participants-avatars" style="display:flex;gap:6px;"></div>
-      <div id="participants-count" style="color:#fff;font-size:12px;margin-top:2px;font-family:monospace;"></div>
-    </div>
   </div>
-  <div id="record-reminder" style="display:none;position:fixed;top:18px;right:18px;background:rgba(255,126,95,0.92);color:white;padding:6px 16px;border-radius:6px;z-index:2001;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.10);max-width:260px;align-items:center;">
+
+  <!-- Lembrete de gravação -->
+  <div id="record-reminder" style="position:fixed;top:18px;right:18px;background:rgba(255,126,95,0.92);color:white;padding:6px 16px;border-radius:6px;z-index:2001;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.10);max-width:260px;align-items:center;display:none;">
     <span>Não esqueça de gravar a ligação para poder revê-la no futuro</span>
     <button id="dismiss-reminder" style="background:none;border:none;color:white;font-size:15px;cursor:pointer;padding:0 4px;line-height:1;margin-left:8px;">&times;</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
-    // Initialize all DOM elements
-    const myIdDisplay = document.getElementById("my-id");
-    const remoteIdInput = document.getElementById("remote-id");
-    const sharedScreen = document.getElementById("shared-screen");
-    const toggleMicButton = document.getElementById("toggle-mic");
-    const shareScreenButton = document.getElementById("share-screen");
-    const stopSharingButton = document.getElementById("stop-sharing");
-    const connectButton = document.getElementById("connect");
-    const notesButton = document.getElementById("notes");
-    const notesPanel = document.querySelector(".notes-panel");
-    const notesClose = document.querySelector(".notes-close");
+    // Elementos DOM
+    const roomUI = document.getElementById('room-ui');
+    const videoContainer = document.getElementById('video-container');
+    const roomInput = document.getElementById('room-input');
+    const joinRoomButton = document.getElementById('join-room');
+    const sharedScreen = document.getElementById('shared-screen');
+    const toggleMicButton = document.getElementById('toggle-mic');
+    const shareScreenButton = document.getElementById('share-screen');
+    const stopSharingButton = document.getElementById('stop-sharing');
+    const recordButton = document.getElementById('record');
+    const leaveRoomButton = document.getElementById('leave-room');
+    const timerToggle = document.getElementById('timer-toggle');
+    const timerText = document.getElementById('timer-text');
+    const participantsAvatars = document.getElementById('participants-avatars');
+    const participantsCount = document.getElementById('participants-count');
 
-    // Initialize state variables
-    let micStream = null;
-    let localStream = null;
-    let currentCall = null;
-    let isMicMuted = false;
+    // Variáveis de estado
+    let room = null;
+    let localParticipant = null;
     let mediaRecorder = null;
     let recordedChunks = [];
     let isRecording = false;
-    let easyMDE = null;
-    let recordingStartTime = null;
-    let recordingEndTime = null;
-    let reminderTimeout = null;
-    let participantIds = [];
-    let dataConnections = [];
-    let allRecordings = [];
-
-    // 1. Inicializar Firebase
-    firebase.initializeApp({
-      apiKey: "AIzaSyBW3wM-MQwWpY6NO-bT-7w_788CRO-Dmy0",
-      authDomain: "sunset-fb135.firebaseapp.com",
-      databaseURL: "https://sunset-fb135-default-rtdb.firebaseio.com",
-      projectId: "sunset-fb135",
-      storageBucket: "sunset-fb135.firebasestorage.app",
-      messagingSenderId: "534790546866",
-      appId: "1:534790546866:web:0233a54c5d21d0c33670ab",
-      measurementId: "G-JPE61B1PY3"
-    });
-    const db = firebase.database();
-
-    // 2. Gerar roomId a partir da URL
-    function getRoomId() {
-      const params = new URLSearchParams(window.location.search);
-      let room = params.get('room');
-      if (!room) {
-        room = Math.random().toString(36).substring(2, 10);
-        window.location.search = '?room=' + room;
-      }
-      return room;
-    }
-    const roomId = getRoomId();
-
-    // 3. Gerar PeerJS ID único para a sala
-    const myPeerId = `${roomId}-${Math.random().toString(36).substring(2, 10)}`;
-    const peer = new Peer(myPeerId);
-
-    // 4. Registrar e monitorar peers no Firebase
-    const roomRef = db.ref('rooms/' + roomId + '/peers');
-    roomRef.child(myPeerId).set(true);
-    window.addEventListener('beforeunload', () => {
-      roomRef.child(myPeerId).remove();
-    });
-
-    // 5. Conectar automaticamente a todos os peers da sala
-    roomRef.on('value', snapshot => {
-      const peers = Object.keys(snapshot.val() || {});
-      peers.forEach(pid => {
-        if (pid !== myPeerId && !dataConnections.some(conn => conn.peer === pid)) {
-          const conn = peer.connect(pid);
-          dataConnections.push(conn);
-          // ... (restante do seu código de conexão, se necessário)
-        }
-      });
-    });
-
-    // 6. Atualizar exibição do ID e participantes
-    if (myIdDisplay) myIdDisplay.textContent = myPeerId;
-
-    // 7. Remover input de Remote Peer ID e botão de conectar manual
-    document.getElementById('remote-id').style.display = 'none';
-    document.getElementById('connect').style.display = 'none';
-
-    // Ao carregar a página, pedir permissão para o microfone uma vez
-    navigator.mediaDevices.getUserMedia({
-      audio: {
-        sampleRate: 48000,
-        channelCount: 2,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
-      }
-    })
-      .then(stream => {
-        micStream = stream;
-        isMicMuted = false;
-        toggleMicButton.classList.remove('active');
-        toggleMicButton.querySelector('.icon').className = 'fas fa-microphone icon';
-        toggleMicButton.querySelector('.tooltip').textContent = 'Mute Microphone';
-      })
-      .catch(err => {
-        console.error('Erro ao obter permissão do microfone:', err);
-        alert('Permissão do microfone é necessária para usar o app.');
-      });
-
-    function toggleMicrophone() {
-      if (!micStream) return;
-      const micIcon = toggleMicButton.querySelector('.icon');
-      const audioTracks = micStream.getAudioTracks();
-      let anyEnabled = false;
-      audioTracks.forEach(track => {
-        track.enabled = !track.enabled;
-        if (track.enabled) anyEnabled = true;
-      });
-      isMicMuted = !anyEnabled;
-      toggleMicButton.classList.toggle('active', isMicMuted);
-      if (isMicMuted) {
-        micIcon.className = 'fas fa-microphone-slash icon';
-        toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
-      } else {
-        micIcon.className = 'fas fa-microphone icon';
-        toggleMicButton.querySelector('.tooltip').textContent = 'Mute Microphone';
-      }
-    }
-
-    // Função para iniciar o compartilhamento de tela tradicional
-    async function shareScreen() {
-      try {
-        if (!micStream) {
-          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        }
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            width: { ideal: 3840 },
-            height: { ideal: 2160 },
-            frameRate: { ideal: 60, max: 60 }
-          },
-          audio: true
-        });
-        localStream = new MediaStream([
-          ...displayStream.getVideoTracks(),
-          ...micStream.getAudioTracks()
-        ]);
-        sharedScreen.srcObject = localStream;
-        await sharedScreen.play();
-        // Sinalize no Firebase que está compartilhando
-        await db.ref('rooms/' + roomId + '/screenShare').set(myPeerId);
-        shareScreenButton.style.display = 'none';
-        stopSharingButton.style.display = 'flex';
-        // Inicie chamada para todos os peers conectados
-        roomRef.once('value').then(snapshot => {
-          const peers = Object.keys(snapshot.val() || {});
-          peers.forEach(pid => {
-            if (pid !== myPeerId) {
-              const call = peer.call(pid, localStream);
-              // Forçar codec VP9 e aumentar bitrate
-              call.on('signal', data => {
-                if (data.sdp) {
-                  // Forçar VP9, se não, H264
-                  let sdp = data.sdp;
-                  if (sdp.includes('VP9')) {
-                    sdp = sdp.replace(/m=video (.*?)\r\n/g, match => match + 'a=rtpmap:98 VP9/90000\r\n');
-                    sdp = sdp.replace(/m=video .*/g, line => line.replace('VP8', 'VP9'));
-                  } else if (sdp.includes('H264')) {
-                    sdp = sdp.replace(/m=video (.*?)\r\n/g, match => match + 'a=rtpmap:102 H264/90000\r\n');
-                    sdp = sdp.replace(/m=video .*/g, line => line.replace('VP8', 'H264'));
-                  }
-                  data.sdp = sdp;
-                }
-              });
-              call.on('stream', () => {
-                if (call.peerConnection) {
-                  call.peerConnection.getSenders().forEach(sender => {
-                    if (sender.track && sender.track.kind === 'video') {
-                      const params = sender.getParameters();
-                      if (!params.encodings) params.encodings = [{}];
-                      params.encodings[0].maxBitrate = 10000 * 1000; // 10 Mbps
-                      sender.setParameters(params);
-                    }
-                  });
-                }
-              });
-            }
-          });
-        });
-        displayStream.getVideoTracks()[0].onended = () => {
-          stopSharing();
-        };
-        // Gravação automática (mantém igual)
-        recordedChunks = [];
-        mediaRecorder = new MediaRecorder(localStream, {
-          mimeType: 'video/webm;codecs=vp9,opus',
-          audioBitsPerSecond: 192000
-        });
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            recordedChunks.push(event.data);
-          }
-        };
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: 'video/webm' });
-          allRecordings.push(blob);
-        };
-        mediaRecorder.start();
-        displayStream.getVideoTracks()[0].addEventListener('ended', () => {
-          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-        });
-        window._stopScreenRecording = () => {
-          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-        };
-      } catch (err) {
-        console.error("Error sharing screen:", err);
-        alert("Screen sharing failed: " + err.message);
-      }
-    }
-
-    // Função para iniciar chamada só de áudio
-    async function startAudioCall(remoteId) {
-      if (!micStream) {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      }
-      localStream = micStream;
-      const call = peer.call(remoteId, micStream);
-      currentCall = call;
-      call.on("close", () => {
-        stopSharing();
-      });
-      call.on("stream", (stream) => {
-        localStream = stream;
-        sharedScreen.srcObject = null;
-        startCallTimerSync();
-      });
-    }
-
-    // Stop sharing function
-    function stopSharing() {
-      if (currentCall) {
-        currentCall.close();
-      }
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-      sharedScreen.srcObject = null;
-      shareScreenButton.style.display = 'flex';
-      stopSharingButton.style.display = 'none';
-      stopCallTimer();
-      if (window._stopScreenRecording) {
-        window._stopScreenRecording();
-        window._stopScreenRecording = null;
-      }
-    }
-
-    // Event listeners
-    toggleMicButton.addEventListener('click', toggleMicrophone);
-    shareScreenButton.addEventListener('click', shareScreen);
-    stopSharingButton.addEventListener('click', stopSharing);
-    connectButton.addEventListener('click', () => {
-      const remoteId = remoteIdInput.value.trim();
-      if (remoteId) {
-        // Se não estiver compartilhando tela, inicie chamada só de áudio
-        if (!localStream) {
-          startAudioCall(remoteId);
-        } else {
-          connectToPeer(remoteId);
-        }
-      }
-    });
-
-    // PeerJS event handlers
-    peer.on("open", id => {
-      if (myIdDisplay) myIdDisplay.textContent = id;
-      participantIds = [id];
-      updateParticipantsDisplay();
-    });
-
-    peer.on("call", incomingCall => {
-      incomingCall.answer();
-      incomingCall.on("stream", stream => {
-        localStream = stream;
-        sharedScreen.srcObject = stream;
-        sharedScreen.play();
-        startCallTimerSync();
-      });
-    });
-
-    // Ao receber conexão de dados
-    peer.on('connection', conn => {
-      dataConnections.push(conn);
-      conn.on('data', data => {
-        if (data.type === 'participant-list') {
-          participantIds = Array.from(new Set([...participantIds, ...data.ids]));
-          updateParticipantsDisplay();
-        } else if (data.type === 'join') {
-          if (!participantIds.includes(data.id)) {
-            participantIds.push(data.id);
-            updateParticipantsDisplay();
-          }
-          // Envie a lista de volta para o novo peer
-          conn.send({ type: 'participant-list', ids: participantIds });
-        } else if (data.type === 'leave') {
-          participantIds = participantIds.filter(pid => pid !== data.id);
-          updateParticipantsDisplay();
-        }
-      });
-    });
-
-    // Cleanup on page unload
-    window.onbeforeunload = () => {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-      if (currentCall) {
-        currentCall.close();
-      }
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-      mergeAndDownloadRecordings();
-    };
-
-    // Markdown editor functions
-    function formatText(prefix, suffix = '') {
-      const editor = document.getElementById('markdown-editor');
-      const start = editor.selectionStart;
-      const end = editor.selectionEnd;
-      const text = editor.value;
-      const selectedText = text.substring(start, end);
-      
-      if (prefix === '[' && suffix === '](url)') {
-        const url = prompt('Digite a URL do link:');
-        if (url) {
-          editor.value = text.substring(0, start) + `[${selectedText || 'texto do link'}](${url})` + text.substring(end);
-          editor.focus();
-          editor.setSelectionRange(start + (selectedText ? selectedText.length : 13) + 3, start + (selectedText ? selectedText.length : 13) + url.length + 3);
-        }
-      } else if (prefix === '![' && suffix === '](url)') {
-        const url = prompt('Digite a URL da imagem:');
-        if (url) {
-          editor.value = text.substring(0, start) + `![${selectedText || 'descrição'}](${url})` + text.substring(end);
-          editor.focus();
-          editor.setSelectionRange(start + (selectedText ? selectedText.length : 9) + 4, start + (selectedText ? selectedText.length : 9) + url.length + 4);
-        }
-      } else {
-        editor.value = text.substring(0, start) + prefix + selectedText + suffix + text.substring(end);
-        editor.focus();
-        editor.setSelectionRange(start + prefix.length, end + prefix.length);
-      }
-    }
-
-    function togglePreview() {
-      const editor = document.getElementById('markdown-editor');
-      const preview = document.getElementById('markdown-preview');
-      const previewButton = document.querySelector('.toolbar-button[title="Visualizar"]');
-      
-      if (preview.classList.contains('active')) {
-        preview.classList.remove('active');
-        editor.style.display = 'block';
-        previewButton.classList.remove('active');
-      } else {
-        preview.classList.add('active');
-        editor.style.display = 'none';
-        previewButton.classList.add('active');
-        updatePreview();
-      }
-    }
-
-    function updatePreview() {
-      const editor = document.getElementById('markdown-editor');
-      const preview = document.getElementById('markdown-preview');
-      const text = editor.value;
-      
-      // Simple markdown conversion
-      let html = text
-        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
-        .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%;">')
-        .replace(/^- \[ \] (.*$)/gm, '<div class="task-item"><input type="checkbox"> $1</div>')
-        .replace(/^- \[x\] (.*$)/gm, '<div class="task-item"><input type="checkbox" checked> $1</div>')
-        .replace(/^- (.*$)/gm, '<li>$1</li>')
-        .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
-        .replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>')
-        .replace(/`(.*?)`/g, '<code>$1</code>')
-        .replace(/```\n([\s\S]*?)\n```/g, '<pre><code>$1</code></pre>')
-        .replace(/\n/g, '<br>');
-      
-      // Wrap lists
-      html = html.replace(/<li>.*?<\/li>/g, function(match) {
-        return '<ul>' + match + '</ul>';
-      });
-      
-      preview.innerHTML = html;
-    }
-
-    // Initialize notes
-    function initNotes() {
-      const editor = document.getElementById('markdown-editor');
-      const savedNotes = localStorage.getItem('meeting-notes');
-      
-      if (savedNotes) {
-        editor.value = savedNotes;
-      }
-
-      editor.addEventListener('input', () => {
-        localStorage.setItem('meeting-notes', editor.value);
-        if (document.getElementById('markdown-preview').classList.contains('active')) {
-          updatePreview();
-        }
-      });
-    }
-
-    // Toggle notes panel
-    notesButton.addEventListener('click', () => {
-      notesPanel.classList.toggle('active');
-      if (notesPanel.classList.contains('active')) {
-        initNotes();
-      }
-    });
-
-    // Close notes panel
-    notesClose.addEventListener('click', () => {
-      notesPanel.classList.remove('active');
-    });
-
-    function toggleFullscreen() {
-      const notesPanel = document.querySelector('.notes-panel');
-      const fullscreenButton = document.querySelector('.toolbar-button[title="Tela Cheia"]');
-      
-      if (notesPanel.classList.contains('fullscreen')) {
-        notesPanel.classList.remove('fullscreen');
-        fullscreenButton.querySelector('i').className = 'fa fa-expand';
-      } else {
-        notesPanel.classList.add('fullscreen');
-        fullscreenButton.querySelector('i').className = 'fa fa-compress';
-      }
-    }
-
-    // JS for drag-to-resize
-    (function() {
-      const notesPanel = document.querySelector('.notes-panel');
-      const dragHandle = document.querySelector('.notes-drag-handle');
-      let isDragging = false;
-      let startX = 0;
-      let startWidth = 0;
-
-      dragHandle.addEventListener('mousedown', function(e) {
-        isDragging = true;
-        startX = e.clientX;
-        startWidth = notesPanel.offsetWidth;
-        document.body.style.userSelect = 'none';
-      });
-
-      window.addEventListener('mousemove', function(e) {
-        if (!isDragging) return;
-        const dx = startX - e.clientX;
-        let newWidth = startWidth + dx;
-        newWidth = Math.max(280, Math.min(window.innerWidth, newWidth));
-        notesPanel.style.width = newWidth + 'px';
-      });
-
-      window.addEventListener('mouseup', function() {
-        if (isDragging) {
-          isDragging = false;
-          document.body.style.userSelect = '';
-        }
-      });
-    })();
-
-    // Botão para sair da call
-    const leaveCallButton = document.getElementById('leave-call');
-    if (leaveCallButton) {
-      leaveCallButton.addEventListener('click', async () => {
-        stopSharing();
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
-        }
-        await mergeAndDownloadRecordings();
-      });
-    }
-
-    // Timer logic with play/pause (sincronizado via Firebase)
     let timerInterval = null;
     let timerStart = null;
     let timerPausedAt = null;
     let timerRunning = false;
 
-    const timerRef = db.ref('rooms/' + roomId + '/timer');
+    // Notes functionality
+    const notesButton = document.getElementById("notes");
+    const notesPanel = document.querySelector(".notes-panel");
+    const notesClose = document.querySelector(".notes-close");
+    const markdownEditor = document.getElementById("markdown-editor");
+    const markdownPreview = document.getElementById("markdown-preview");
+    let isPreviewMode = false;
+    let isFullscreen = false;
 
+    // Função para atualizar participantes
+    function updateParticipants() {
+      try {
+        if (!room) {
+          console.log('Room not initialized');
+          participantsCount.textContent = '0 participantes';
+          participantsAvatars.innerHTML = '';
+          return;
+        }
+
+        // Corrigido: obter participantes remotos corretamente
+        let remoteParticipants = [];
+        if (room.participants) {
+          // Em algumas versões do LiveKit, participants é um Map
+          if (typeof room.participants.values === 'function') {
+            remoteParticipants = Array.from(room.participants.values());
+          } 
+          // Em outras versões pode ser um objeto normal
+          else if (room.participants instanceof Object) {
+            remoteParticipants = Object.values(room.participants);
+          }
+        }
+        
+        console.log('Remote participants count:', remoteParticipants.length);
+        
+        // Debug logs
+        const roomState = {
+          roomName: room.name,
+          localParticipant: room.localParticipant?.identity,
+          remoteParticipants: remoteParticipants.map(p => p.identity),
+          totalParticipants: remoteParticipants.length + 1
+        };
+        console.log('Updating participants. Room state:', roomState);
+
+        // Collect all participants
+        const allParticipants = [];
+        
+        // Add local participant
+        if (room.localParticipant) {
+          console.log('Adding local participant:', room.localParticipant.identity);
+          allParticipants.push(room.localParticipant);
+        }
+
+        // Add all remote participants
+        remoteParticipants.forEach(participant => {
+          if (participant && participant.identity) {
+            console.log('Adding remote participant:', participant.identity);
+            allParticipants.push(participant);
+          }
+        });
+
+        // Update participant count
+        const totalParticipants = allParticipants.length;
+        console.log(`Total participants: ${totalParticipants} (Local: ${room.localParticipant ? 1 : 0}, Remote: ${remoteParticipants.length})`);
+        participantsCount.textContent = `${totalParticipants} participante${totalParticipants !== 1 ? 's' : ''}`;
+
+        // Clear and update avatars
+        participantsAvatars.innerHTML = '';
+        
+        allParticipants.forEach((participant, index) => {
+          if (!participant || !participant.identity) return;
+
+          const avatar = document.createElement('div');
+          avatar.className = 'participant-avatar';
+          
+          const initial = participant.identity.replace('user-', '').charAt(0).toUpperCase();
+          avatar.title = participant.identity;
+          avatar.innerHTML = `<span style="font-size: 12px; color: white;">${initial}</span>`;
+          
+          const hue = Math.abs(participant.identity.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % 360;
+          avatar.style.backgroundColor = `hsl(${hue}, 70%, 60%)`;
+          
+          if (totalParticipants > 3) {
+            const angle = (2 * Math.PI * index) / totalParticipants;
+            const radius = 15;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            avatar.style.transform = `translate(${x}px, ${y}px)`;
+          }
+          
+          participantsAvatars.appendChild(avatar);
+        });
+
+        // Update container style
+        participantsAvatars.style.display = 'flex';
+        participantsAvatars.style.justifyContent = 'center';
+        participantsAvatars.style.alignItems = 'center';
+        
+        if (totalParticipants > 3) {
+          participantsAvatars.style.width = '50px';
+          participantsAvatars.style.height = '50px';
+          participantsAvatars.style.position = 'relative';
+        } else {
+          participantsAvatars.style.width = 'auto';
+          participantsAvatars.style.height = 'auto';
+          participantsAvatars.style.position = 'static';
+        }
+
+      } catch (error) {
+        console.error('Error updating participants:', error);
+      }
+    }
+
+    async function getToken(roomName) {
+      const response = await fetch('http://localhost:3000/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room: roomName,
+          identity: `user-${Math.random().toString(36).substring(2, 10)}`
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to get token');
+      const { token } = await response.json();
+      return token;
+    }
+
+    async function connectToRoom(roomName) {
+      try {
+        console.log('Starting connection to room:', roomName);
+        
+        // Get token
+        console.log('Requesting token from backend...');
+        const token = await getToken(roomName);
+        console.log('Token received successfully');
+        
+        // Initialize room
+        console.log('Initializing LiveKit room...');
+        room = new LivekitClient.Room({
+          adaptiveStream: true,
+          dynacast: true,
+          publishDefaults: {
+            simulcast: true,
+            videoEncoding: {
+              maxBitrate: 6000000,
+              maxFramerate: 60
+            }
+          },
+        });
+
+        // Setup event listeners before connecting
+        console.log('Setting up room event listeners...');
+        
+        room.on(LivekitClient.RoomEvent.Connected, () => {
+          console.log('Successfully connected to room:', room.name);
+          roomUI.style.display = 'none';
+          videoContainer.style.display = 'block';
+          startCallTimer();
+        });
+
+        room.on(LivekitClient.RoomEvent.Disconnected, (reason) => {
+          console.log('Disconnected from room:', room.name, 'Reason:', reason);
+          roomUI.style.display = 'flex';
+          videoContainer.style.display = 'none';
+        });
+
+        room.on(LivekitClient.RoomEvent.Reconnecting, () => {
+          console.log('Attempting to reconnect to room:', room.name);
+        });
+
+        room.on(LivekitClient.RoomEvent.Reconnected, () => {
+          console.log('Successfully reconnected to room:', room.name);
+        });
+
+        room.on(LivekitClient.RoomEvent.ConnectionStateChanged, (state) => {
+          console.log('Connection state changed:', state);
+        });
+
+        // Setup screen share handling
+        room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+          console.log('Track subscribed:', {
+            trackSource: track.source,
+            participant: participant.identity,
+            publication: publication.kind,
+            trackId: track.sid,
+            trackName: track.name,
+            trackKind: track.kind,
+            trackEnabled: track.enabled,
+            trackMuted: track.muted
+          });
+          
+          // Check for screen share track by name or source
+          if (track.name === 'screen-share' || track.source === LivekitClient.Track.Source.ScreenShare) {
+            console.log('Screen share track received from:', participant.identity);
+            
+            // Create a new MediaStream with the track
+            const stream = new MediaStream([track.mediaStreamTrack]);
+            
+            // Configure video element
+            sharedScreen.style.width = '100%';
+            sharedScreen.style.height = 'auto';
+            sharedScreen.style.objectFit = 'contain';
+            sharedScreen.style.backgroundColor = '#000';
+            
+            // Set the stream to the video element
+            sharedScreen.srcObject = stream;
+            shareScreenButton.style.display = 'none';
+            stopSharingButton.style.display = 'flex';
+
+            // Log video element state
+            console.log('Video element state:', {
+              readyState: sharedScreen.readyState,
+              error: sharedScreen.error,
+              srcObject: sharedScreen.srcObject ? 'set' : 'not set',
+              videoWidth: sharedScreen.videoWidth,
+              videoHeight: sharedScreen.videoHeight
+            });
+
+            // Handle track ended event
+            track.mediaStreamTrack.onended = () => {
+              console.log('Remote screen share ended');
+              if (sharedScreen.srcObject) {
+                sharedScreen.srcObject.getTracks().forEach(t => t.stop());
+                sharedScreen.srcObject = null;
+              }
+              shareScreenButton.style.display = 'flex';
+              stopSharingButton.style.display = 'none';
+            };
+
+            // Log when the video starts playing
+            sharedScreen.onplaying = () => {
+              console.log('Screen share video started playing');
+              console.log('Video dimensions:', {
+                width: sharedScreen.videoWidth,
+                height: sharedScreen.videoHeight
+              });
+            };
+
+            // Log any video errors
+            sharedScreen.onerror = (error) => {
+              console.error('Screen share video error:', error);
+            };
+
+            // Log track state changes
+            track.on(LivekitClient.TrackEvent.Enabled, () => {
+              console.log('Screen share track enabled');
+            });
+
+            track.on(LivekitClient.TrackEvent.Disabled, () => {
+              console.log('Screen share track disabled');
+            });
+
+            track.on(LivekitClient.TrackEvent.Ended, () => {
+              console.log('Screen share track ended');
+            });
+
+            // Force play the video
+            sharedScreen.play().catch(error => {
+              console.error('Error playing video:', error);
+            });
+          }
+        });
+
+        room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+          console.log('Track unsubscribed:', {
+            trackSource: track.source,
+            participant: participant.identity,
+            publication: publication.kind,
+            trackId: track.sid,
+            trackName: track.name
+          });
+          
+          if (track.source === LivekitClient.Track.Source.ScreenShare) {
+            console.log('Screen share track ended from:', participant.identity);
+            if (sharedScreen.srcObject) {
+              sharedScreen.srcObject.getTracks().forEach(track => track.stop());
+              sharedScreen.srcObject = null;
+            }
+            shareScreenButton.style.display = 'flex';
+            stopSharingButton.style.display = 'none';
+          }
+        });
+
+        // Connect to room
+        console.log('Connecting to LiveKit server...');
+        await room.connect('ws://localhost:7880', token, {
+          autoSubscribe: true,
+          rtcConfig: {
+            iceServers: [
+              {
+                urls: ['stun:stun.l.google.com:19302']
+              }
+            ]
+          }
+        });
+        console.log('Room connection initiated');
+
+      } catch (error) {
+        console.error('Failed to connect to room:', error);
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+        alert('Failed to connect to room: ' + error.message);
+        
+        // Cleanup on error
+        if (room) {
+          try {
+            await room.disconnect();
+          } catch (disconnectError) {
+            console.error('Error during cleanup:', disconnectError);
+          }
+        }
+      }
+    }
+
+    // Função para compartilhar tela
+    async function shareScreen() {
+      try {
+        if (!room || !room.localParticipant) {
+          console.error('Not connected to room');
+          return;
+        }
+
+        console.log('Starting screen share...');
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 }
+          }
+        });
+
+        console.log('Screen share stream obtained:', screenStream.getVideoTracks()[0].label);
+        
+        // Create a new track from the screen share stream
+        const videoTrack = screenStream.getVideoTracks()[0];
+        const screenTrack = new LivekitClient.LocalVideoTrack(videoTrack, {
+          name: 'screen-share',
+          source: LivekitClient.Track.Source.ScreenShare,
+          resolution: {
+            width: 1920,
+            height: 1080,
+            frameRate: 30
+          }
+        });
+
+        // Set track metadata
+        screenTrack.source = LivekitClient.Track.Source.ScreenShare;
+        screenTrack.name = 'screen-share';
+        
+        // Publish the track
+        console.log('Publishing screen share track...');
+        await room.localParticipant.publishTrack(screenTrack);
+        console.log('Screen share track published successfully');
+
+        // Configure video element
+        sharedScreen.style.width = '100%';
+        sharedScreen.style.height = 'auto';
+        sharedScreen.style.objectFit = 'contain';
+        sharedScreen.style.backgroundColor = '#000';
+
+        // Set the local preview
+        sharedScreen.srcObject = screenStream;
+        shareScreenButton.style.display = 'none';
+        stopSharingButton.style.display = 'flex';
+
+        // Force play the video
+        sharedScreen.play().catch(error => {
+          console.error('Error playing video:', error);
+        });
+
+        // Handle when user stops sharing through browser UI
+        videoTrack.onended = () => {
+          console.log('Screen share ended by user');
+          stopSharing();
+        };
+
+      } catch (error) {
+        console.error('Failed to share screen:', error);
+        alert('Failed to share screen: ' + error.message);
+      }
+    }
+
+    // Função para parar compartilhamento
+    async function stopSharing() {
+      try {
+        if (!room || !room.localParticipant) return;
+
+        const tracks = room.localParticipant.getTracks();
+        const screenTrack = tracks.find(track => track.source === LivekitClient.Track.Source.ScreenShare);
+        
+        if (screenTrack) {
+          await room.localParticipant.unpublishTrack(screenTrack);
+          screenTrack.stop();
+        }
+
+        if (sharedScreen.srcObject) {
+          sharedScreen.srcObject.getTracks().forEach(track => track.stop());
+          sharedScreen.srcObject = null;
+        }
+
+        shareScreenButton.style.display = 'flex';
+        stopSharingButton.style.display = 'none';
+      } catch (error) {
+        console.error('Error stopping screen share:', error);
+      }
+    }
+
+    // Função para alternar microfone
+    async function toggleMicrophone() {
+      if (!localParticipant) return;
+
+      const audioTrack = localParticipant.tracks.find(
+        pub => pub.track.kind === 'audio'
+      );
+
+      if (audioTrack) {
+        const isMuted = !audioTrack.track.isMuted;
+        await audioTrack.track.setMuted(isMuted);
+        toggleMicButton.classList.toggle('active', isMuted);
+        toggleMicButton.querySelector('.icon').className = isMuted ? 'fas fa-microphone-slash icon' : 'fas fa-microphone icon';
+        toggleMicButton.querySelector('.tooltip').textContent = isMuted ? 'Unmute Microphone' : 'Mute Microphone';
+      }
+    }
+
+    // Função para gravar
+    function toggleRecording() {
+      if (!isRecording) {
+        if (!sharedScreen.srcObject) {
+          alert('Nenhum stream disponível para gravar. Inicie uma chamada ou compartilhe a tela primeiro.');
+          return;
+        }
+
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(sharedScreen.srcObject, {
+          mimeType: 'video/webm;codecs=vp9,opus',
+          audioBitsPerSecond: 192000
+        });
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          document.body.appendChild(a);
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `recording-${new Date().toISOString()}.webm`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        recordButton.classList.add('recording');
+        recordButton.querySelector('.icon').className = 'fas fa-stop icon';
+        recordButton.querySelector('.tooltip').textContent = 'Stop Recording';
+        hideRecordReminder();
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        recordButton.classList.remove('recording');
+        recordButton.querySelector('.icon').className = 'fas fa-circle icon';
+        recordButton.querySelector('.tooltip').textContent = 'Start Recording';
+      }
+    }
+
+    // Funções do timer
     function updateTimerDisplay() {
-      const timerText = document.getElementById('timer-text');
       if (!timerText) return;
       let elapsed = 0;
       if (timerRunning && timerStart) {
@@ -1311,142 +1134,42 @@
       timerText.textContent = `${hours}:${minutes}:${seconds}`;
     }
 
-    function startCallTimerSync() {
-      timerRef.once('value').then(snap => {
-        const val = snap.val();
-        if (!val || val.paused) {
-          // Iniciar timer global
-          timerRef.set({
-            startTime: Date.now(),
-            paused: false,
-            pausedAt: null
-          });
-        }
-      });
-    }
-
-    function pauseCallTimerSync() {
-      timerRef.once('value').then(snap => {
-        const val = snap.val();
-        if (val && !val.paused) {
-          timerRef.update({
-            paused: true,
-            pausedAt: Date.now()
-          });
-        }
-      });
-    }
-
-    function resumeCallTimerSync() {
-      timerRef.once('value').then(snap => {
-        const val = snap.val();
-        if (val && val.paused) {
-          // Ajusta o startTime para compensar o tempo pausado
-          const pauseDuration = Date.now() - val.pausedAt;
-          timerRef.update({
-            paused: false,
-            startTime: val.startTime + pauseDuration,
-            pausedAt: null
-          });
-        }
-      });
-    }
-
-    document.getElementById('timer-toggle').onclick = function() {
-      if (timerRunning) {
-        pauseCallTimerSync();
-      } else {
-        if (timerStart && timerPausedAt) {
-          resumeCallTimerSync();
-        } else {
-          startCallTimerSync();
-        }
-      }
-    };
-
-    // Sincronizar timer local com Firebase
-    function syncTimerFromFirebase(val) {
-      if (!val) {
-        // Timer nunca iniciado
-        timerStart = null;
+    function startCallTimer() {
+      if (!timerRunning) {
+        timerStart = Date.now() - (timerPausedAt ? timerPausedAt - timerStart : 0);
         timerPausedAt = null;
-        timerRunning = false;
-        document.getElementById('timer-toggle-icon').className = 'fa fa-play';
+        timerRunning = true;
+        timerToggle.querySelector('i').className = 'fa fa-pause';
         if (timerInterval) clearInterval(timerInterval);
-        updateTimerDisplay();
-        return;
-      }
-      timerStart = val.startTime;
-      timerPausedAt = val.pausedAt;
-      timerRunning = !val.paused;
-      document.getElementById('timer-toggle-icon').className = timerRunning ? 'fa fa-pause' : 'fa fa-play';
-      if (timerInterval) clearInterval(timerInterval);
-      if (timerRunning) {
         timerInterval = setInterval(updateTimerDisplay, 1000);
+        updateTimerDisplay();
       }
-      updateTimerDisplay();
     }
 
-    timerRef.on('value', snap => {
-      syncTimerFromFirebase(snap.val());
-    });
-
-    // Ao entrar na sala, sincronize o timer
-    window.addEventListener('load', () => {
-      timerRef.once('value').then(snap => {
-        syncTimerFromFirebase(snap.val());
-      });
-    });
-
-    // Atualizar participantes
-    function updateParticipantsDisplay() {
-      const avatars = document.getElementById('participants-avatars');
-      const count = document.getElementById('participants-count');
-      if (!avatars || !count) return;
-      // Use a lista de peers do Firebase
-      roomRef.once('value').then(snapshot => {
-        const peers = Object.keys(snapshot.val() || {});
-        avatars.innerHTML = '';
-        for (let i = 0; i < peers.length; i++) {
-          avatars.innerHTML += '<div style="width:22px;height:22px;border-radius:50%;background:#ff7e5f;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);"></div>';
+    function pauseCallTimer() {
+      if (timerRunning) {
+        timerPausedAt = Date.now();
+        timerRunning = false;
+        timerToggle.querySelector('i').className = 'fa fa-play';
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
         }
-        count.textContent = peers.length + ' participante' + (peers.length > 1 ? 's' : '');
-      });
-    }
-    // Atualize sempre que peers mudarem
-    roomRef.on('value', updateParticipantsDisplay);
-
-    // Ao conectar a outro peer, envie seu ID e peça a lista
-    function connectToPeer(remoteId) {
-      const conn = peer.connect(remoteId);
-      dataConnections.push(conn);
-      conn.on('open', () => {
-        conn.send({ type: 'join', id: peer.id });
-      });
-      conn.on('data', data => {
-        if (data.type === 'participant-list') {
-          participantIds = Array.from(new Set([...participantIds, ...data.ids]));
-          updateParticipantsDisplay();
-        } else if (data.type === 'join') {
-          if (!participantIds.includes(data.id)) {
-            participantIds.push(data.id);
-            updateParticipantsDisplay();
-          }
-          // Envie a lista de volta para o novo peer
-          conn.send({ type: 'participant-list', ids: participantIds });
-        } else if (data.type === 'leave') {
-          participantIds = participantIds.filter(pid => pid !== data.id);
-          updateParticipantsDisplay();
-        }
-      });
+      }
     }
 
+    function toggleTimer() {
+      if (timerRunning) {
+        pauseCallTimer();
+      } else {
+        startCallTimer();
+      }
+    }
+
+    // Funções do lembrete de gravação
     function showRecordReminder() {
       const reminder = document.getElementById('record-reminder');
       reminder.style.display = 'flex';
-      document.getElementById('dismiss-reminder').onclick = function() {
-        reminder.style.display = 'none';
-      };
     }
 
     function hideRecordReminder() {
@@ -1454,49 +1177,164 @@
       reminder.style.display = 'none';
     }
 
-    // Merge all recordings and download as a single file
-    async function mergeAndDownloadRecordings() {
-      if (allRecordings.length === 0) return;
-      if (allRecordings.length === 1) {
-        // Only one recording, just download it
-        const url = URL.createObjectURL(allRecordings[0]);
-        const a = document.createElement('a');
-        document.body.appendChild(a);
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `recording-${new Date().toISOString()}.webm`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        return;
+    document.getElementById('dismiss-reminder').onclick = hideRecordReminder;
+
+    // Mostrar lembrete após 5 minutos se não estiver gravando
+    setTimeout(() => {
+      if (!isRecording && room) {
+        showRecordReminder();
       }
-      // Multiple recordings, merge with ffmpeg.wasm
-      const { createFFmpeg, fetchFile } = FFmpeg;
-      const ffmpeg = createFFmpeg({ log: true });
-      await ffmpeg.load();
-      // Write all blobs to FS
-      for (let i = 0; i < allRecordings.length; i++) {
-        ffmpeg.FS('writeFile', `input${i}.webm`, await fetchFile(allRecordings[i]));
+    }, 5 * 60 * 1000);
+
+    // Load saved notes
+    markdownEditor.value = localStorage.getItem('notes-' + roomInput.value) || '';
+
+    notesButton.addEventListener("click", () => {
+      notesPanel.classList.toggle("active");
+    });
+
+    notesClose.addEventListener("click", () => {
+      notesPanel.classList.remove("active");
+    });
+
+    function togglePreview() {
+      isPreviewMode = !isPreviewMode;
+      markdownEditor.style.display = isPreviewMode ? 'none' : 'block';
+      markdownPreview.style.display = isPreviewMode ? 'block' : 'none';
+      if (isPreviewMode) {
+        markdownPreview.innerHTML = marked.parse(markdownEditor.value);
       }
-      // Create concat list
-      let concatList = '';
-      for (let i = 0; i < allRecordings.length; i++) {
-        concatList += `file 'input${i}.webm'\n`;
+    }
+
+    function toggleFullscreen() {
+      isFullscreen = !isFullscreen;
+      notesPanel.classList.toggle('fullscreen', isFullscreen);
+    }
+
+    function formatText(prefix, suffix = '') {
+      const start = markdownEditor.selectionStart;
+      const end = markdownEditor.selectionEnd;
+      const text = markdownEditor.value;
+      const before = text.substring(0, start);
+      const selection = text.substring(start, end);
+      const after = text.substring(end);
+      
+      markdownEditor.value = before + prefix + selection + suffix + after;
+      markdownEditor.focus();
+      
+      if (selection.length > 0) {
+        markdownEditor.selectionStart = start + prefix.length;
+        markdownEditor.selectionEnd = end + prefix.length;
+      } else {
+        markdownEditor.selectionStart = markdownEditor.selectionEnd = start + prefix.length;
       }
-      ffmpeg.FS('writeFile', 'inputs.txt', concatList);
-      // Merge
-      await ffmpeg.run('-f', 'concat', '-safe', '0', '-i', 'inputs.txt', '-c', 'copy', 'output.webm');
-      const data = ffmpeg.FS('readFile', 'output.webm');
-      const mergedBlob = new Blob([data.buffer], { type: 'video/webm' });
-      const url = URL.createObjectURL(mergedBlob);
-      const a = document.createElement('a');
-      document.body.appendChild(a);
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `recording-${new Date().toISOString()}.webm`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+    }
+
+    // Auto-save notes
+    markdownEditor.addEventListener('input', () => {
+      localStorage.setItem('notes-' + roomInput.value, markdownEditor.value);
+    });
+
+    // Event Listeners
+    joinRoomButton.addEventListener('click', () => {
+      const roomName = roomInput.value.trim();
+      if (roomName) {
+        connectToRoom(roomName);
+      }
+    });
+
+    toggleMicButton.addEventListener('click', toggleMicrophone);
+    shareScreenButton.addEventListener('click', shareScreen);
+    stopSharingButton.addEventListener('click', stopSharing);
+    recordButton.addEventListener('click', toggleRecording);
+    timerToggle.addEventListener('click', toggleTimer);
+
+    leaveRoomButton.addEventListener('click', async () => {
+      if (isRecording) {
+        toggleRecording(); // Para a gravação se estiver ativa
+      }
+      if (room) {
+        await room.disconnect();
+      }
+      roomUI.style.display = 'flex';
+      videoContainer.style.display = 'none';
+      sharedScreen.srcObject = null;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      timerText.textContent = '00:00:00';
+      timerStart = null;
+      timerPausedAt = null;
+      timerRunning = false;
+      timerToggle.querySelector('i').className = 'fa fa-play';
+    });
+
+    function setupScreenShare() {
+      const screenShareButton = document.getElementById('screen-share-button');
+      const stopScreenShareButton = document.getElementById('stop-screen-share-button');
+
+      screenShareButton.onclick = async () => {
+        screenShareButton.disabled = true;
+        stopScreenShareButton.disabled = false;
+
+        try {
+          screenTrack = await LivekitClient.createScreenShareTrack({
+            resolution: {
+              width: 1920,
+              height: 1080,
+              frameRate: 30,
+            },
+          });
+          
+          await room.localParticipant.publishTrack(screenTrack);
+          console.log('Screen share started');
+        } catch (e) {
+          console.error('Failed to share screen:', e);
+          screenShareButton.disabled = false;
+          stopScreenShareButton.disabled = true;
+        }
+      };
+
+      stopScreenShareButton.onclick = async () => {
+        if (screenTrack) {
+          await room.localParticipant.unpublishTrack(screenTrack);
+          screenTrack.stop();
+          screenTrack = null;
+          console.log('Screen share stopped');
+        }
+        screenShareButton.disabled = false;
+        stopScreenShareButton.disabled = true;
+      };
+    }
+
+    function setupDeviceSelection() {
+      const videoInput = document.getElementById('video-input');
+      const audioInput = document.getElementById('audio-input');
+
+      LivekitClient.getLocalDevices('videoinput')
+        .then(devices => {
+          videoInput.innerHTML = '';
+          devices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label;
+            videoInput.appendChild(option);
+          });
+        })
+        .catch(console.error);
+
+      LivekitClient.getLocalDevices('audioinput')
+        .then(devices => {
+          audioInput.innerHTML = '';
+          devices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label;
+            audioInput.appendChild(option);
+          });
+        })
+        .catch(console.error);
     }
   </script>
 </body>

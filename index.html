@@ -698,10 +698,6 @@
           <i class="fas fa-microphone icon"></i>
           <span class="tooltip">Mute Microphone</span>
         </button>
-        <button id="record" class="control-button" title="Start Recording">
-          <i class="fas fa-circle icon"></i>
-          <span class="tooltip">Start Recording</span>
-        </button>
         <button id="notes" class="control-button" title="Open Notes">
           <i class="fas fa-sticky-note icon"></i>
           <span class="tooltip">Open Notes</span>
@@ -787,8 +783,14 @@
     </div>
   </div>
 
-  <div id="call-timer" style="display:none;position:fixed;top:18px;left:18px;background:rgba(0,0,0,0.7);color:#fff;padding:6px 16px;border-radius:6px;z-index:2000;font-size:15px;font-family:monospace;letter-spacing:1px;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
-    00:00:00
+  <div style="display:flex;align-items:flex-start;position:fixed;top:18px;left:18px;z-index:2000;">
+    <div id="call-timer" style="display:none;background:rgba(0,0,0,0.7);color:#fff;padding:6px 16px;border-radius:6px;font-size:15px;font-family:monospace;letter-spacing:1px;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
+      00:00:00
+    </div>
+    <div id="participants-container" style="display:flex;flex-direction:column;align-items:center;margin-left:16px;">
+      <div id="participants-avatars" style="display:flex;gap:6px;"></div>
+      <div id="participants-count" style="color:#fff;font-size:12px;margin-top:2px;font-family:monospace;"></div>
+    </div>
   </div>
   <div id="record-reminder" style="display:none;position:fixed;top:18px;right:18px;background:rgba(255,126,95,0.92);color:white;padding:6px 16px;border-radius:6px;z-index:2001;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.10);max-width:260px;align-items:center;">
     <span>Não esqueça de gravar a ligação para poder revê-la no futuro</span>
@@ -796,6 +798,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
   <script>
     // Initialize all DOM elements
     const myIdDisplay = document.getElementById("my-id");
@@ -811,9 +814,10 @@
 
     // Initialize state variables
     const peer = new Peer();
+    let micStream = null;
     let localStream = null;
     let currentCall = null;
-    let isMicMuted = true; // Start muted
+    let isMicMuted = false;
     let mediaRecorder = null;
     let recordedChunks = [];
     let isRecording = false;
@@ -823,35 +827,36 @@
     let timerInterval = null;
     let timerStart = null;
     let reminderTimeout = null;
+    let participantIds = [];
+    let dataConnections = [];
+    let allRecordings = [];
 
-    // Set initial microphone state
-    toggleMicButton.classList.add('active');
-    toggleMicButton.querySelector('.icon').className = 'fas fa-microphone-slash icon';
-    toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
-
-    // Microphone toggle function
-    function toggleMicrophone() {
-      const micIcon = toggleMicButton.querySelector('.icon');
-      if (!localStream) {
-        localStream = new MediaStream();
-        navigator.mediaDevices.getUserMedia({ audio: true })
-          .then(stream => {
-            stream.getAudioTracks().forEach(track => localStream.addTrack(track));
-            toggleMicrophoneState();
-          })
-          .catch(err => {
-            console.error('Error getting microphone:', err);
-            alert('Could not access microphone');
-          });
-      } else {
-        toggleMicrophoneState();
+    // Ao carregar a página, pedir permissão para o microfone uma vez
+    navigator.mediaDevices.getUserMedia({
+      audio: {
+        sampleRate: 48000,
+        channelCount: 2,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
       }
-    }
+    })
+      .then(stream => {
+        micStream = stream;
+        isMicMuted = false;
+        toggleMicButton.classList.remove('active');
+        toggleMicButton.querySelector('.icon').className = 'fas fa-microphone icon';
+        toggleMicButton.querySelector('.tooltip').textContent = 'Mute Microphone';
+      })
+      .catch(err => {
+        console.error('Erro ao obter permissão do microfone:', err);
+        alert('Permissão do microfone é necessária para usar o app.');
+      });
 
-    function toggleMicrophoneState() {
+    function toggleMicrophone() {
+      if (!micStream) return;
       const micIcon = toggleMicButton.querySelector('.icon');
-      if (!localStream) return;
-      const audioTracks = localStream.getAudioTracks();
+      const audioTracks = micStream.getAudioTracks();
       let anyEnabled = false;
       audioTracks.forEach(track => {
         track.enabled = !track.enabled;
@@ -871,20 +876,14 @@
     // Função para iniciar o compartilhamento de tela tradicional
     async function shareScreen() {
       try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!micStream) {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
         const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         localStream = new MediaStream([
           ...displayStream.getVideoTracks(),
-          ...audioStream.getAudioTracks()
+          ...micStream.getAudioTracks()
         ]);
-        // NÃO desabilite as tracks de áudio automaticamente!
-        // const audioTracks = localStream.getAudioTracks();
-        // audioTracks.forEach(track => { track.enabled = false; });
-        // isMicMuted = true;
-        // const micIcon = toggleMicButton.querySelector('.icon');
-        // micIcon.className = 'fas fa-microphone-slash icon';
-        // toggleMicButton.classList.add('active');
-        // toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
         sharedScreen.srcObject = localStream;
         await sharedScreen.play();
         const remoteId = remoteIdInput.value.trim();
@@ -901,90 +900,63 @@
           stopSharing();
         });
         call.on("stream", (stream) => {
-          if (!localStream) {
-            localStream = stream;
-          }
+          localStream = stream;
+          sharedScreen.srcObject = stream;
+          sharedScreen.play();
           startCallTimer();
         });
         displayStream.getVideoTracks()[0].onended = () => {
           stopSharing();
         };
+
+        // --- Start recording automatically ---
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(localStream, {
+          mimeType: 'video/webm;codecs=vp9,opus',
+          audioBitsPerSecond: 192000
+        });
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          allRecordings.push(blob);
+          // Do not download yet, wait for call end
+        };
+        mediaRecorder.start();
+        // Stop recording when screen sharing ends
+        displayStream.getVideoTracks()[0].addEventListener('ended', () => {
+          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        });
+        // Also stop when stopSharing() is called
+        window._stopScreenRecording = () => {
+          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        };
+        // --- End recording logic ---
       } catch (err) {
         console.error("Error sharing screen:", err);
         alert("Screen sharing failed: " + err.message);
       }
     }
 
-    // Recording functions
-    function showRecordingWarning() {
-      if (document.getElementById('recording-warning')) return;
-      const warning = document.createElement('div');
-      warning.id = 'recording-warning';
-      warning.style.display = 'flex';
-      warning.style.alignItems = 'center';
-      warning.style.position = 'fixed';
-      warning.style.top = '18px';
-      warning.style.right = '18px';
-      warning.style.background = 'rgba(255,126,95,0.92)';
-      warning.style.color = 'white';
-      warning.style.padding = '6px 16px';
-      warning.style.borderRadius = '6px';
-      warning.style.zIndex = '2000';
-      warning.style.fontSize = '13px';
-      warning.style.boxShadow = '0 2px 8px rgba(0,0,0,0.10)';
-      warning.style.maxWidth = '260px';
-      warning.innerHTML = '<span style="margin-right:8px;">Esta conversa está sendo gravada.</span>' +
-        '<button id="dismiss-warning" style="background:none;border:none;color:white;font-size:15px;cursor:pointer;padding:0 4px;line-height:1;">&times;</button>';
-      document.body.appendChild(warning);
-      document.getElementById('dismiss-warning').onclick = function() {
-        warning.style.display = 'none';
-      };
-    }
-
-    function startRecording() {
-      if (!localStream) return;
-      showRecordingWarning();
-      recordedChunks = [];
-      mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm;codecs=vp9' });
-      console.log('MediaRecorder:', mediaRecorder);
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunks.push(event.data);
-        }
-      };
-      mediaRecorder.onstop = () => {
-        recordingEndTime = Date.now();
-        const duration = ((recordingEndTime - recordingStartTime) / 1000).toFixed(2);
-        console.log('Duração da gravação:', duration, 'segundos');
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        document.body.appendChild(a);
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `recording-${new Date().toISOString()}.webm`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      };
-      mediaRecorder.start();
-      recordingStartTime = Date.now();
-      isRecording = true;
-      const recordButton = document.getElementById('record');
-      recordButton.classList.add('active', 'recording');
-      recordButton.querySelector('.icon').className = 'fas fa-stop-circle icon';
-      recordButton.querySelector('.tooltip').textContent = 'Stop Recording';
-    }
-
-    function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        isRecording = false;
-        const recordButton = document.getElementById('record');
-        recordButton.classList.remove('active', 'recording');
-        recordButton.querySelector('.icon').className = 'fas fa-circle icon';
-        recordButton.querySelector('.tooltip').textContent = 'Start Recording';
+    // Função para iniciar chamada só de áudio
+    async function startAudioCall(remoteId) {
+      if (!micStream) {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       }
+      localStream = micStream;
+      const call = peer.call(remoteId, micStream);
+      currentCall = call;
+      call.on("close", () => {
+        stopSharing();
+      });
+      call.on("stream", (stream) => {
+        localStream = stream;
+        sharedScreen.srcObject = null;
+        startCallTimer();
+      });
     }
 
     // Stop sharing function
@@ -999,6 +971,11 @@
       shareScreenButton.style.display = 'flex';
       stopSharingButton.style.display = 'none';
       stopCallTimer();
+      // Stop recording if active
+      if (window._stopScreenRecording) {
+        window._stopScreenRecording();
+        window._stopScreenRecording = null;
+      }
     }
 
     // Event listeners
@@ -1006,23 +983,52 @@
     shareScreenButton.addEventListener('click', shareScreen);
     stopSharingButton.addEventListener('click', stopSharing);
     connectButton.addEventListener('click', () => {
-      startCallTimer();
+      const remoteId = remoteIdInput.value.trim();
+      if (remoteId) {
+        // Se não estiver compartilhando tela, inicie chamada só de áudio
+        if (!localStream) {
+          startAudioCall(remoteId);
+        } else {
+          connectToPeer(remoteId);
+        }
+      }
     });
 
     // PeerJS event handlers
     peer.on("open", id => {
       if (myIdDisplay) myIdDisplay.textContent = id;
+      participantIds = [id];
+      updateParticipantsDisplay();
     });
 
     peer.on("call", incomingCall => {
       incomingCall.answer();
       incomingCall.on("stream", stream => {
+        localStream = stream;
         sharedScreen.srcObject = stream;
         sharedScreen.play();
-        if (!localStream) {
-          localStream = stream;
-        }
         startCallTimer();
+      });
+    });
+
+    // Ao receber conexão de dados
+    peer.on('connection', conn => {
+      dataConnections.push(conn);
+      conn.on('data', data => {
+        if (data.type === 'participant-list') {
+          participantIds = Array.from(new Set([...participantIds, ...data.ids]));
+          updateParticipantsDisplay();
+        } else if (data.type === 'join') {
+          if (!participantIds.includes(data.id)) {
+            participantIds.push(data.id);
+            updateParticipantsDisplay();
+          }
+          // Envie a lista de volta para o novo peer
+          conn.send({ type: 'participant-list', ids: participantIds });
+        } else if (data.type === 'leave') {
+          participantIds = participantIds.filter(pid => pid !== data.id);
+          updateParticipantsDisplay();
+        }
       });
     });
 
@@ -1036,11 +1042,8 @@
       }
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
-        if (recordingStartTime) {
-          const duration = ((Date.now() - recordingStartTime) / 1000).toFixed(2);
-          console.log('Duração da gravação:', duration, 'segundos');
-        }
       }
+      mergeAndDownloadRecordings();
     };
 
     // Markdown editor functions
@@ -1196,54 +1199,23 @@
     // Botão para sair da call
     const leaveCallButton = document.getElementById('leave-call');
     if (leaveCallButton) {
-      leaveCallButton.addEventListener('click', () => {
+      leaveCallButton.addEventListener('click', async () => {
         stopSharing();
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.onstop = () => {
-            recordingEndTime = Date.now();
-            const duration = ((recordingEndTime - recordingStartTime) / 1000).toFixed(2);
-            console.log('Duração da gravação:', duration, 'segundos');
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            document.body.appendChild(a);
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `recording-${new Date().toISOString()}.webm`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-          };
           mediaRecorder.stop();
         }
+        await mergeAndDownloadRecordings();
       });
     }
 
-    // Event listener do botão de gravação
-    const recordButton = document.getElementById('record');
-    recordButton.addEventListener('click', () => {
-      if (!localStream) {
-        alert('Nenhum stream disponível para gravar. Inicie uma chamada ou compartilhe a tela primeiro.');
-        return;
+    function updateParticipantsDisplay() {
+      const avatars = document.getElementById('participants-avatars');
+      const count = document.getElementById('participants-count');
+      avatars.innerHTML = '';
+      for (let i = 0; i < participantIds.length; i++) {
+        avatars.innerHTML += '<div style="width:22px;height:22px;border-radius:50%;background:#ff7e5f;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);"></div>';
       }
-      if (isRecording) {
-        stopRecording();
-      } else {
-        startRecording();
-      }
-    });
-
-    function showRecordReminder() {
-      const reminder = document.getElementById('record-reminder');
-      reminder.style.display = 'flex';
-      document.getElementById('dismiss-reminder').onclick = function() {
-        reminder.style.display = 'none';
-      };
-    }
-
-    function hideRecordReminder() {
-      const reminder = document.getElementById('record-reminder');
-      reminder.style.display = 'none';
+      count.textContent = participantIds.length + ' participante' + (participantIds.length > 1 ? 's' : '');
     }
 
     function startCallTimer() {
@@ -1258,7 +1230,7 @@
         const seconds = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
         timer.textContent = `${hours}:${minutes}:${seconds}`;
         // Mostrar reminder aos 5 minutos apenas se não estiver gravando
-        if (elapsed >= 0.3 * 60 * 1000 && !reminderTimeout && !isRecording) {
+        if (elapsed >= 5 * 60 * 1000 && !reminderTimeout && !isRecording) {
           showRecordReminder();
           reminderTimeout = true;
         }
@@ -1272,6 +1244,95 @@
       timer.textContent = '00:00:00';
       hideRecordReminder();
       reminderTimeout = null;
+      // Notificar saída
+      dataConnections.forEach(conn => {
+        if (conn.open) conn.send({ type: 'leave', id: peer.id });
+      });
+      participantIds = [peer.id];
+      updateParticipantsDisplay();
+    }
+
+    // Ao conectar a outro peer, envie seu ID e peça a lista
+    function connectToPeer(remoteId) {
+      const conn = peer.connect(remoteId);
+      dataConnections.push(conn);
+      conn.on('open', () => {
+        conn.send({ type: 'join', id: peer.id });
+      });
+      conn.on('data', data => {
+        if (data.type === 'participant-list') {
+          participantIds = Array.from(new Set([...participantIds, ...data.ids]));
+          updateParticipantsDisplay();
+        } else if (data.type === 'join') {
+          if (!participantIds.includes(data.id)) {
+            participantIds.push(data.id);
+            updateParticipantsDisplay();
+          }
+          // Envie a lista de volta para o novo peer
+          conn.send({ type: 'participant-list', ids: participantIds });
+        } else if (data.type === 'leave') {
+          participantIds = participantIds.filter(pid => pid !== data.id);
+          updateParticipantsDisplay();
+        }
+      });
+    }
+
+    function showRecordReminder() {
+      const reminder = document.getElementById('record-reminder');
+      reminder.style.display = 'flex';
+      document.getElementById('dismiss-reminder').onclick = function() {
+        reminder.style.display = 'none';
+      };
+    }
+
+    function hideRecordReminder() {
+      const reminder = document.getElementById('record-reminder');
+      reminder.style.display = 'none';
+    }
+
+    // Merge all recordings and download as a single file
+    async function mergeAndDownloadRecordings() {
+      if (allRecordings.length === 0) return;
+      if (allRecordings.length === 1) {
+        // Only one recording, just download it
+        const url = URL.createObjectURL(allRecordings[0]);
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `recording-${new Date().toISOString()}.webm`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        return;
+      }
+      // Multiple recordings, merge with ffmpeg.wasm
+      const { createFFmpeg, fetchFile } = FFmpeg;
+      const ffmpeg = createFFmpeg({ log: true });
+      await ffmpeg.load();
+      // Write all blobs to FS
+      for (let i = 0; i < allRecordings.length; i++) {
+        ffmpeg.FS('writeFile', `input${i}.webm`, await fetchFile(allRecordings[i]));
+      }
+      // Create concat list
+      let concatList = '';
+      for (let i = 0; i < allRecordings.length; i++) {
+        concatList += `file 'input${i}.webm'\n`;
+      }
+      ffmpeg.FS('writeFile', 'inputs.txt', concatList);
+      // Merge
+      await ffmpeg.run('-f', 'concat', '-safe', '0', '-i', 'inputs.txt', '-c', 'copy', 'output.webm');
+      const data = ffmpeg.FS('readFile', 'output.webm');
+      const mergedBlob = new Blob([data.buffer], { type: 'video/webm' });
+      const url = URL.createObjectURL(mergedBlob);
+      const a = document.createElement('a');
+      document.body.appendChild(a);
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `recording-${new Date().toISOString()}.webm`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     }
   </script>
 </body>

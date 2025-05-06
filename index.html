@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <title>Sunset - Screen Share</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
   <style>
     :root {
       --sunset-orange: #ff7e5f;
@@ -108,6 +110,7 @@
       align-items: center;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 100;
     }
 
     .control-button {
@@ -268,6 +271,262 @@
     .text-button:active {
       transform: translateY(0);
     }
+
+    .notes-panel {
+      position: fixed;
+      right: -400px;
+      top: 0;
+      width: 400px;
+      height: 100vh;
+      background: var(--discord-dark);
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+      transition: right 0.3s ease;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .notes-panel.active {
+      right: 0;
+    }
+
+    .notes-header {
+      padding: 15px;
+      background: var(--discord-darker);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .notes-title {
+      color: var(--text-primary);
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .notes-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 5px;
+      font-size: 1.2rem;
+    }
+
+    .notes-close:hover {
+      color: var(--text-primary);
+    }
+
+    .notes-content {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .EasyMDEContainer {
+      height: 100%;
+    }
+
+    .EasyMDEContainer .editor-toolbar {
+      background: var(--discord-darker);
+      border: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      gap: 8px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      min-height: 50px;
+    }
+
+    .EasyMDEContainer .editor-toolbar button {
+      color: var(--text-secondary);
+      border: none;
+      background: transparent;
+      padding: 6px 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      position: relative;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 30px;
+    }
+
+    .EasyMDEContainer .editor-toolbar button:hover {
+      background: var(--sunset-orange);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    .EasyMDEContainer .editor-toolbar button:active {
+      transform: translateY(0);
+    }
+
+    .EasyMDEContainer .editor-toolbar button.active,
+    .EasyMDEContainer .editor-toolbar button.preview-active {
+      background: var(--sunset-orange);
+      color: white;
+    }
+
+    .EasyMDEContainer .editor-toolbar button::after {
+      content: attr(title);
+      position: absolute;
+      bottom: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      z-index: 1000;
+    }
+
+    .EasyMDEContainer .editor-toolbar button::before {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px;
+      border-style: solid;
+      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      z-index: 1000;
+    }
+
+    .EasyMDEContainer .editor-toolbar button:hover::before,
+    .EasyMDEContainer .editor-toolbar button:hover::after {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .EasyMDEContainer .editor-toolbar i.separator {
+      border: none;
+      font-size: 0;
+      width: 1px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 0 4px;
+      padding: 0;
+    }
+
+    .EasyMDEContainer .CodeMirror {
+      height: 100%;
+      background: var(--discord-dark);
+      color: var(--text-primary);
+      border: none;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 16px;
+    }
+
+    .EasyMDEContainer .CodeMirror-cursor {
+      border-left: 2px solid var(--sunset-orange);
+    }
+
+    .EasyMDEContainer .CodeMirror-selected {
+      background: rgba(255, 126, 95, 0.2);
+    }
+
+    .EasyMDEContainer .CodeMirror-focused .CodeMirror-selected {
+      background: rgba(255, 126, 95, 0.3);
+    }
+
+    .EasyMDEContainer .CodeMirror .cm-header-1 {
+      font-size: 2em;
+      color: var(--sunset-orange);
+    }
+
+    .EasyMDEContainer .CodeMirror .cm-header-2 {
+      font-size: 1.5em;
+      color: var(--sunset-purple);
+    }
+
+    .EasyMDEContainer .CodeMirror .cm-header-3 {
+      font-size: 1.2em;
+      color: var(--text-primary);
+    }
+
+    .EasyMDEContainer .CodeMirror .cm-quote {
+      color: #8b9cb3;
+      font-style: italic;
+      border-left: 3px solid var(--sunset-orange);
+      padding-left: 10px;
+    }
+
+    .EasyMDEContainer .editor-preview {
+      background: var(--discord-dark);
+      color: var(--text-primary);
+      padding: 20px;
+    }
+
+    .EasyMDEContainer .editor-preview h1 {
+      color: var(--sunset-orange);
+      font-size: 2em;
+      margin-bottom: 0.5em;
+    }
+
+    .EasyMDEContainer .editor-preview h2 {
+      color: var(--sunset-purple);
+      font-size: 1.5em;
+      margin-bottom: 0.5em;
+    }
+
+    .EasyMDEContainer .editor-preview h3 {
+      color: var(--text-primary);
+      font-size: 1.2em;
+      margin-bottom: 0.5em;
+    }
+
+    .EasyMDEContainer .editor-preview blockquote {
+      border-left: 3px solid var(--sunset-orange);
+      padding-left: 10px;
+      color: #8b9cb3;
+      font-style: italic;
+      margin: 1em 0;
+    }
+
+    .EasyMDEContainer .editor-preview ul, 
+    .EasyMDEContainer .editor-preview ol {
+      margin: 1em 0;
+      padding-left: 2em;
+    }
+
+    .EasyMDEContainer .editor-preview a {
+      color: var(--sunset-orange);
+      text-decoration: none;
+    }
+
+    .EasyMDEContainer .editor-preview a:hover {
+      text-decoration: underline;
+    }
+
+    .EasyMDEContainer .editor-preview-side {
+      background: var(--discord-dark);
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .EasyMDEContainer .editor-preview-side .editor-preview {
+      padding: 20px;
+    }
+
+    .EasyMDEContainer .editor-preview-active-side {
+      background: var(--discord-dark);
+    }
+
+    .EasyMDEContainer .editor-preview-active {
+      background: var(--discord-dark);
+    }
   </style>
 </head>
 <body>
@@ -287,6 +546,14 @@
           <i class="fas fa-microphone icon"></i>
           <span class="tooltip">Mute Microphone</span>
         </button>
+        <button id="record" class="control-button" title="Start Recording">
+          <i class="fas fa-circle icon"></i>
+          <span class="tooltip">Start Recording</span>
+        </button>
+        <button id="notes" class="control-button" title="Open Notes">
+          <i class="fas fa-sticky-note icon"></i>
+          <span class="tooltip">Open Notes</span>
+        </button>
         <button id="share-screen" class="control-button" title="Share Screen">
           <i class="fas fa-desktop icon"></i>
           <span class="tooltip">Share Screen</span>
@@ -296,6 +563,18 @@
           <span class="tooltip">Stop Sharing</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <div class="notes-panel">
+    <div class="notes-header">
+      <span class="notes-title">Notes</span>
+      <button class="notes-close" title="Close Notes">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="notes-content">
+      <textarea id="notes-editor"></textarea>
     </div>
   </div>
 
@@ -309,12 +588,20 @@
     const shareScreenButton = document.getElementById("share-screen");
     const stopSharingButton = document.getElementById("stop-sharing");
     const connectButton = document.getElementById("connect");
+    const recordButton = document.getElementById("record");
+    const notesButton = document.getElementById("notes");
+    const notesPanel = document.querySelector(".notes-panel");
+    const notesClose = document.querySelector(".notes-close");
 
     // Initialize state variables
     const peer = new Peer();
     let localStream = null;
     let currentCall = null;
     let isMicMuted = true; // Start muted
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+    let easyMDE = null;
 
     // Set initial microphone state
     toggleMicButton.classList.add('active');
@@ -424,6 +711,65 @@
       }
     }
 
+    // Recording functions
+    function startRecording() {
+      if (!localStream) {
+        alert("Please start screen sharing first");
+        return;
+      }
+
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(localStream, {
+        mimeType: 'video/webm;codecs=vp9'
+      });
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, {
+          type: 'video/webm'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `recording-${new Date().toISOString()}.webm`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      recordButton.classList.add('active');
+      recordButton.querySelector('.icon').className = 'fas fa-stop-circle icon';
+      recordButton.querySelector('.tooltip').textContent = 'Stop Recording';
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        isRecording = false;
+        recordButton.classList.remove('active');
+        recordButton.querySelector('.icon').className = 'fas fa-circle icon';
+        recordButton.querySelector('.tooltip').textContent = 'Start Recording';
+      }
+    }
+
+    // Update record button click handler
+    recordButton.addEventListener('click', () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+
     // Stop sharing function
     function stopSharing() {
       if (currentCall) {
@@ -431,6 +777,9 @@
       }
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        stopRecording();
       }
       sharedScreen.srcObject = null;
       shareScreenButton.style.display = 'flex';
@@ -467,6 +816,120 @@
         currentCall.close();
       }
     };
+
+    // Initialize Markdown editor
+    function initMarkdownEditor() {
+      if (!easyMDE) {
+        easyMDE = new EasyMDE({
+          element: document.getElementById('notes-editor'),
+          spellChecker: false,
+          status: false,
+          toolbar: [
+            {
+              name: "heading-1",
+              action: function customHeading1(editor) {
+                editor.toggleHeading1();
+              },
+              className: "fa fa-header",
+              title: "Título Principal",
+            },
+            {
+              name: "heading-2",
+              action: function customHeading2(editor) {
+                editor.toggleHeading2();
+              },
+              className: "fa fa-header fa-sm",
+              title: "Subtítulo",
+            },
+            {
+              name: "bold",
+              action: function customBold(editor) {
+                editor.toggleBold();
+              },
+              className: "fa fa-bold",
+              title: "Negrito",
+            },
+            {
+              name: "italic",
+              action: function customItalic(editor) {
+                editor.toggleItalic();
+              },
+              className: "fa fa-italic",
+              title: "Itálico",
+            },
+            {
+              name: "preview",
+              action: function customPreview(editor) {
+                const previewButton = editor.toolbarElements.preview;
+                if (editor.isPreviewActive()) {
+                  editor.togglePreview();
+                  previewButton.classList.remove('preview-active');
+                } else {
+                  editor.togglePreview();
+                  previewButton.classList.add('preview-active');
+                }
+              },
+              className: "fa fa-eye",
+              title: "Visualizar",
+            },
+            {
+              name: "fullscreen",
+              action: function customFullscreen(editor) {
+                editor.toggleFullScreen();
+              },
+              className: "fa fa-expand",
+              title: "Tela Cheia",
+            }
+          ],
+          theme: 'dark',
+          autofocus: false,
+          placeholder: 'Anote aqui os tópicos importantes da reunião...\n\nDicas:\n- Use # para títulos principais\n- Use ## para subtítulos\n- Use **texto** para negrito\n- Use *texto* para itálico',
+          autoDownloadFontAwesome: false,
+          shortcuts: {
+            'heading-1': 'Ctrl-1',
+            'heading-2': 'Ctrl-2',
+            'bold': 'Ctrl-B',
+            'italic': 'Ctrl-I',
+            'preview': 'Ctrl-P',
+            'fullscreen': 'F11'
+          }
+        });
+
+        // Set default template if no saved notes
+        const savedNotes = localStorage.getItem('meeting-notes');
+        if (!savedNotes) {
+          easyMDE.value(defaultTemplate);
+        } else {
+          easyMDE.value(savedNotes);
+        }
+
+        // Save notes to localStorage
+        easyMDE.codemirror.on('change', () => {
+          localStorage.setItem('meeting-notes', easyMDE.value());
+        });
+
+        // Handle preview toggle
+        easyMDE.codemirror.on('change', () => {
+          const previewButton = easyMDE.toolbarElements.preview;
+          if (!easyMDE.isPreviewActive()) {
+            previewButton.classList.remove('preview-active');
+          }
+        });
+      }
+    }
+
+    // Toggle notes panel
+    notesButton.addEventListener('click', () => {
+      notesPanel.classList.toggle('active');
+      if (notesPanel.classList.contains('active')) {
+        initMarkdownEditor();
+      }
+    });
+
+    // Close notes panel
+    notesClose.addEventListener('click', () => {
+      notesPanel.classList.remove('active');
+    });
   </script>
 </body>
 </html>

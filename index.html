@@ -687,8 +687,8 @@
 
     <div class="connection-panel">
       <span id="my-id"></span>
-      <input type="text" id="remote-id" placeholder="Remote Peer ID" />
-      <button id="connect" class="text-button">Entrar na chamada</button>
+      <input type="text" id="remote-id" placeholder="Remote Peer ID" style="display: none;">
+      <button id="connect" class="text-button" style="display: none;">Entrar na chamada</button>
     </div>
 
     <div class="video-container">
@@ -783,9 +783,13 @@
     </div>
   </div>
 
+  <!-- Top left: timer + participants -->
   <div style="display:flex;align-items:flex-start;position:fixed;top:18px;left:18px;z-index:2000;">
-    <div id="call-timer" style="display:none;background:rgba(0,0,0,0.7);color:#fff;padding:6px 16px;border-radius:6px;font-size:15px;font-family:monospace;letter-spacing:1px;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
-      00:00:00
+    <div id="call-timer" style="display:flex;align-items:center;background:rgba(0,0,0,0.7);color:#fff;padding:6px 16px;border-radius:6px;font-size:15px;font-family:monospace;letter-spacing:1px;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
+      <button id="timer-toggle" style="background:none;border:none;color:white;font-size:16px;cursor:pointer;margin-right:8px;outline:none;">
+        <i id="timer-toggle-icon" class="fa fa-play"></i>
+      </button>
+      <span id="timer-text">00:00:00</span>
     </div>
     <div id="participants-container" style="display:flex;flex-direction:column;align-items:center;margin-left:16px;">
       <div id="participants-avatars" style="display:flex;gap:6px;"></div>
@@ -799,6 +803,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script>
     // Initialize all DOM elements
     const myIdDisplay = document.getElementById("my-id");
@@ -813,7 +819,6 @@
     const notesClose = document.querySelector(".notes-close");
 
     // Initialize state variables
-    const peer = new Peer();
     let micStream = null;
     let localStream = null;
     let currentCall = null;
@@ -824,12 +829,65 @@
     let easyMDE = null;
     let recordingStartTime = null;
     let recordingEndTime = null;
-    let timerInterval = null;
-    let timerStart = null;
     let reminderTimeout = null;
     let participantIds = [];
     let dataConnections = [];
     let allRecordings = [];
+
+    // 1. Inicializar Firebase
+    firebase.initializeApp({
+      apiKey: "AIzaSyBW3wM-MQwWpY6NO-bT-7w_788CRO-Dmy0",
+      authDomain: "sunset-fb135.firebaseapp.com",
+      databaseURL: "https://sunset-fb135-default-rtdb.firebaseio.com",
+      projectId: "sunset-fb135",
+      storageBucket: "sunset-fb135.firebasestorage.app",
+      messagingSenderId: "534790546866",
+      appId: "1:534790546866:web:0233a54c5d21d0c33670ab",
+      measurementId: "G-JPE61B1PY3"
+    });
+    const db = firebase.database();
+
+    // 2. Gerar roomId a partir da URL
+    function getRoomId() {
+      const params = new URLSearchParams(window.location.search);
+      let room = params.get('room');
+      if (!room) {
+        room = Math.random().toString(36).substring(2, 10);
+        window.location.search = '?room=' + room;
+      }
+      return room;
+    }
+    const roomId = getRoomId();
+
+    // 3. Gerar PeerJS ID único para a sala
+    const myPeerId = `${roomId}-${Math.random().toString(36).substring(2, 10)}`;
+    const peer = new Peer(myPeerId);
+
+    // 4. Registrar e monitorar peers no Firebase
+    const roomRef = db.ref('rooms/' + roomId + '/peers');
+    roomRef.child(myPeerId).set(true);
+    window.addEventListener('beforeunload', () => {
+      roomRef.child(myPeerId).remove();
+    });
+
+    // 5. Conectar automaticamente a todos os peers da sala
+    roomRef.on('value', snapshot => {
+      const peers = Object.keys(snapshot.val() || {});
+      peers.forEach(pid => {
+        if (pid !== myPeerId && !dataConnections.some(conn => conn.peer === pid)) {
+          const conn = peer.connect(pid);
+          dataConnections.push(conn);
+          // ... (restante do seu código de conexão, se necessário)
+        }
+      });
+    });
+
+    // 6. Atualizar exibição do ID e participantes
+    if (myIdDisplay) myIdDisplay.textContent = myPeerId;
+
+    // 7. Remover input de Remote Peer ID e botão de conectar manual
+    document.getElementById('remote-id').style.display = 'none';
+    document.getElementById('connect').style.display = 'none';
 
     // Ao carregar a página, pedir permissão para o microfone uma vez
     navigator.mediaDevices.getUserMedia({
@@ -879,37 +937,64 @@
         if (!micStream) {
           micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         }
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 3840 },
+            height: { ideal: 2160 },
+            frameRate: { ideal: 60, max: 60 }
+          },
+          audio: true
+        });
         localStream = new MediaStream([
           ...displayStream.getVideoTracks(),
           ...micStream.getAudioTracks()
         ]);
         sharedScreen.srcObject = localStream;
         await sharedScreen.play();
-        const remoteId = remoteIdInput.value.trim();
-        if (!remoteId) {
-          alert("Please enter a Remote ID to share your screen.");
-          return;
-        }
-        const call = peer.call(remoteId, localStream);
-        currentCall = call;
+        // Sinalize no Firebase que está compartilhando
+        await db.ref('rooms/' + roomId + '/screenShare').set(myPeerId);
         shareScreenButton.style.display = 'none';
         stopSharingButton.style.display = 'flex';
-        call.on("close", () => {
-          console.log("Call closed.");
-          stopSharing();
-        });
-        call.on("stream", (stream) => {
-          localStream = stream;
-          sharedScreen.srcObject = stream;
-          sharedScreen.play();
-          startCallTimer();
+        // Inicie chamada para todos os peers conectados
+        roomRef.once('value').then(snapshot => {
+          const peers = Object.keys(snapshot.val() || {});
+          peers.forEach(pid => {
+            if (pid !== myPeerId) {
+              const call = peer.call(pid, localStream);
+              // Forçar codec VP9 e aumentar bitrate
+              call.on('signal', data => {
+                if (data.sdp) {
+                  // Forçar VP9, se não, H264
+                  let sdp = data.sdp;
+                  if (sdp.includes('VP9')) {
+                    sdp = sdp.replace(/m=video (.*?)\r\n/g, match => match + 'a=rtpmap:98 VP9/90000\r\n');
+                    sdp = sdp.replace(/m=video .*/g, line => line.replace('VP8', 'VP9'));
+                  } else if (sdp.includes('H264')) {
+                    sdp = sdp.replace(/m=video (.*?)\r\n/g, match => match + 'a=rtpmap:102 H264/90000\r\n');
+                    sdp = sdp.replace(/m=video .*/g, line => line.replace('VP8', 'H264'));
+                  }
+                  data.sdp = sdp;
+                }
+              });
+              call.on('stream', () => {
+                if (call.peerConnection) {
+                  call.peerConnection.getSenders().forEach(sender => {
+                    if (sender.track && sender.track.kind === 'video') {
+                      const params = sender.getParameters();
+                      if (!params.encodings) params.encodings = [{}];
+                      params.encodings[0].maxBitrate = 10000 * 1000; // 10 Mbps
+                      sender.setParameters(params);
+                    }
+                  });
+                }
+              });
+            }
+          });
         });
         displayStream.getVideoTracks()[0].onended = () => {
           stopSharing();
         };
-
-        // --- Start recording automatically ---
+        // Gravação automática (mantém igual)
         recordedChunks = [];
         mediaRecorder = new MediaRecorder(localStream, {
           mimeType: 'video/webm;codecs=vp9,opus',
@@ -923,18 +1008,14 @@
         mediaRecorder.onstop = () => {
           const blob = new Blob(recordedChunks, { type: 'video/webm' });
           allRecordings.push(blob);
-          // Do not download yet, wait for call end
         };
         mediaRecorder.start();
-        // Stop recording when screen sharing ends
         displayStream.getVideoTracks()[0].addEventListener('ended', () => {
           if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         });
-        // Also stop when stopSharing() is called
         window._stopScreenRecording = () => {
           if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         };
-        // --- End recording logic ---
       } catch (err) {
         console.error("Error sharing screen:", err);
         alert("Screen sharing failed: " + err.message);
@@ -955,7 +1036,7 @@
       call.on("stream", (stream) => {
         localStream = stream;
         sharedScreen.srcObject = null;
-        startCallTimer();
+        startCallTimerSync();
       });
     }
 
@@ -971,7 +1052,6 @@
       shareScreenButton.style.display = 'flex';
       stopSharingButton.style.display = 'none';
       stopCallTimer();
-      // Stop recording if active
       if (window._stopScreenRecording) {
         window._stopScreenRecording();
         window._stopScreenRecording = null;
@@ -1007,7 +1087,7 @@
         localStream = stream;
         sharedScreen.srcObject = stream;
         sharedScreen.play();
-        startCallTimer();
+        startCallTimerSync();
       });
     });
 
@@ -1208,49 +1288,133 @@
       });
     }
 
+    // Timer logic with play/pause (sincronizado via Firebase)
+    let timerInterval = null;
+    let timerStart = null;
+    let timerPausedAt = null;
+    let timerRunning = false;
+
+    const timerRef = db.ref('rooms/' + roomId + '/timer');
+
+    function updateTimerDisplay() {
+      const timerText = document.getElementById('timer-text');
+      if (!timerText) return;
+      let elapsed = 0;
+      if (timerRunning && timerStart) {
+        elapsed = Date.now() - timerStart;
+      } else if (timerPausedAt && timerStart) {
+        elapsed = timerPausedAt - timerStart;
+      }
+      const hours = String(Math.floor(elapsed / 3600000)).padStart(2, '0');
+      const minutes = String(Math.floor((elapsed % 3600000) / 60000)).padStart(2, '0');
+      const seconds = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
+      timerText.textContent = `${hours}:${minutes}:${seconds}`;
+    }
+
+    function startCallTimerSync() {
+      timerRef.once('value').then(snap => {
+        const val = snap.val();
+        if (!val || val.paused) {
+          // Iniciar timer global
+          timerRef.set({
+            startTime: Date.now(),
+            paused: false,
+            pausedAt: null
+          });
+        }
+      });
+    }
+
+    function pauseCallTimerSync() {
+      timerRef.once('value').then(snap => {
+        const val = snap.val();
+        if (val && !val.paused) {
+          timerRef.update({
+            paused: true,
+            pausedAt: Date.now()
+          });
+        }
+      });
+    }
+
+    function resumeCallTimerSync() {
+      timerRef.once('value').then(snap => {
+        const val = snap.val();
+        if (val && val.paused) {
+          // Ajusta o startTime para compensar o tempo pausado
+          const pauseDuration = Date.now() - val.pausedAt;
+          timerRef.update({
+            paused: false,
+            startTime: val.startTime + pauseDuration,
+            pausedAt: null
+          });
+        }
+      });
+    }
+
+    document.getElementById('timer-toggle').onclick = function() {
+      if (timerRunning) {
+        pauseCallTimerSync();
+      } else {
+        if (timerStart && timerPausedAt) {
+          resumeCallTimerSync();
+        } else {
+          startCallTimerSync();
+        }
+      }
+    };
+
+    // Sincronizar timer local com Firebase
+    function syncTimerFromFirebase(val) {
+      if (!val) {
+        // Timer nunca iniciado
+        timerStart = null;
+        timerPausedAt = null;
+        timerRunning = false;
+        document.getElementById('timer-toggle-icon').className = 'fa fa-play';
+        if (timerInterval) clearInterval(timerInterval);
+        updateTimerDisplay();
+        return;
+      }
+      timerStart = val.startTime;
+      timerPausedAt = val.pausedAt;
+      timerRunning = !val.paused;
+      document.getElementById('timer-toggle-icon').className = timerRunning ? 'fa fa-pause' : 'fa fa-play';
+      if (timerInterval) clearInterval(timerInterval);
+      if (timerRunning) {
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+      }
+      updateTimerDisplay();
+    }
+
+    timerRef.on('value', snap => {
+      syncTimerFromFirebase(snap.val());
+    });
+
+    // Ao entrar na sala, sincronize o timer
+    window.addEventListener('load', () => {
+      timerRef.once('value').then(snap => {
+        syncTimerFromFirebase(snap.val());
+      });
+    });
+
+    // Atualizar participantes
     function updateParticipantsDisplay() {
       const avatars = document.getElementById('participants-avatars');
       const count = document.getElementById('participants-count');
-      avatars.innerHTML = '';
-      for (let i = 0; i < participantIds.length; i++) {
-        avatars.innerHTML += '<div style="width:22px;height:22px;border-radius:50%;background:#ff7e5f;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);"></div>';
-      }
-      count.textContent = participantIds.length + ' participante' + (participantIds.length > 1 ? 's' : '');
-    }
-
-    function startCallTimer() {
-      const timer = document.getElementById('call-timer');
-      timerStart = Date.now();
-      timer.style.display = 'flex';
-      timer.textContent = '00:00:00';
-      timerInterval = setInterval(() => {
-        const elapsed = Date.now() - timerStart;
-        const hours = String(Math.floor(elapsed / 3600000)).padStart(2, '0');
-        const minutes = String(Math.floor((elapsed % 3600000) / 60000)).padStart(2, '0');
-        const seconds = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
-        timer.textContent = `${hours}:${minutes}:${seconds}`;
-        // Mostrar reminder aos 5 minutos apenas se não estiver gravando
-        if (elapsed >= 5 * 60 * 1000 && !reminderTimeout && !isRecording) {
-          showRecordReminder();
-          reminderTimeout = true;
+      if (!avatars || !count) return;
+      // Use a lista de peers do Firebase
+      roomRef.once('value').then(snapshot => {
+        const peers = Object.keys(snapshot.val() || {});
+        avatars.innerHTML = '';
+        for (let i = 0; i < peers.length; i++) {
+          avatars.innerHTML += '<div style="width:22px;height:22px;border-radius:50%;background:#ff7e5f;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.12);"></div>';
         }
-      }, 1000);
-    }
-
-    function stopCallTimer() {
-      const timer = document.getElementById('call-timer');
-      timer.style.display = 'none';
-      clearInterval(timerInterval);
-      timer.textContent = '00:00:00';
-      hideRecordReminder();
-      reminderTimeout = null;
-      // Notificar saída
-      dataConnections.forEach(conn => {
-        if (conn.open) conn.send({ type: 'leave', id: peer.id });
+        count.textContent = peers.length + ' participante' + (peers.length > 1 ? 's' : '');
       });
-      participantIds = [peer.id];
-      updateParticipantsDisplay();
     }
+    // Atualize sempre que peers mudarem
+    roomRef.on('value', updateParticipantsDisplay);
 
     // Ao conectar a outro peer, envie seu ID e peça a lista
     function connectToPeer(remoteId) {

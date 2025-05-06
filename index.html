@@ -671,6 +671,14 @@
       box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
       color: var(--text-primary);
     }
+
+    #record.active, #record.recording {
+      background: #ff4444 !important;
+      color: #fff !important;
+    }
+    #record.active .icon, #record.recording .icon {
+      color: #fff !important;
+    }
   </style>
 </head>
 <body>
@@ -705,6 +713,10 @@
         <button id="stop-sharing" class="control-button danger" title="Stop Sharing" style="display: none;">
           <i class="fas fa-stop icon"></i>
           <span class="tooltip">Stop Sharing</span>
+        </button>
+        <button id="leave-call" class="control-button danger" style="background:#ff4444;color:white;" title="Sair da chamada">
+          <i class="fas fa-phone-slash icon"></i>
+          <span class="tooltip">Sair da chamada</span>
         </button>
       </div>
     </div>
@@ -775,6 +787,14 @@
     </div>
   </div>
 
+  <div id="call-timer" style="display:none;position:fixed;top:18px;left:18px;background:rgba(0,0,0,0.7);color:#fff;padding:6px 16px;border-radius:6px;z-index:2000;font-size:15px;font-family:monospace;letter-spacing:1px;box-shadow:0 2px 8px rgba(0,0,0,0.10);">
+    00:00:00
+  </div>
+  <div id="record-reminder" style="display:none;position:fixed;top:18px;right:18px;background:rgba(255,126,95,0.92);color:white;padding:6px 16px;border-radius:6px;z-index:2001;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.10);max-width:260px;align-items:center;">
+    <span>Não esqueça de gravar a ligação para poder revê-la no futuro</span>
+    <button id="dismiss-reminder" style="background:none;border:none;color:white;font-size:15px;cursor:pointer;padding:0 4px;line-height:1;margin-left:8px;">&times;</button>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script>
     // Initialize all DOM elements
@@ -785,7 +805,6 @@
     const shareScreenButton = document.getElementById("share-screen");
     const stopSharingButton = document.getElementById("stop-sharing");
     const connectButton = document.getElementById("connect");
-    const recordButton = document.getElementById("record");
     const notesButton = document.getElementById("notes");
     const notesPanel = document.querySelector(".notes-panel");
     const notesClose = document.querySelector(".notes-close");
@@ -799,6 +818,11 @@
     let recordedChunks = [];
     let isRecording = false;
     let easyMDE = null;
+    let recordingStartTime = null;
+    let recordingEndTime = null;
+    let timerInterval = null;
+    let timerStart = null;
+    let reminderTimeout = null;
 
     // Set initial microphone state
     toggleMicButton.classList.add('active');
@@ -808,12 +832,11 @@
     // Microphone toggle function
     function toggleMicrophone() {
       const micIcon = toggleMicButton.querySelector('.icon');
-      
-      // If we don't have a stream yet, try to get one
       if (!localStream) {
+        localStream = new MediaStream();
         navigator.mediaDevices.getUserMedia({ audio: true })
           .then(stream => {
-            localStream = stream;
+            stream.getAudioTracks().forEach(track => localStream.addTrack(track));
             toggleMicrophoneState();
           })
           .catch(err => {
@@ -827,16 +850,15 @@
 
     function toggleMicrophoneState() {
       const micIcon = toggleMicButton.querySelector('.icon');
+      if (!localStream) return;
       const audioTracks = localStream.getAudioTracks();
-      
+      let anyEnabled = false;
       audioTracks.forEach(track => {
         track.enabled = !track.enabled;
+        if (track.enabled) anyEnabled = true;
       });
-      
-      isMicMuted = !isMicMuted;
+      isMicMuted = !anyEnabled;
       toggleMicButton.classList.toggle('active', isMicMuted);
-      
-      // Update icon and tooltip
       if (isMicMuted) {
         micIcon.className = 'fas fa-microphone-slash icon';
         toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
@@ -849,51 +871,41 @@
     // Função para iniciar o compartilhamento de tela tradicional
     async function shareScreen() {
       try {
-        // Primeiro, obter o áudio do microfone
         const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Depois, obter o display media
         const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-
-        // Combinar ambos os streams
         localStream = new MediaStream([
           ...displayStream.getVideoTracks(),
           ...audioStream.getAudioTracks()
         ]);
-
-        // Mute the microphone by default
-        const audioTracks = localStream.getAudioTracks();
-        audioTracks.forEach(track => {
-          track.enabled = false;
-        });
-        isMicMuted = true;
-        const micIcon = toggleMicButton.querySelector('.icon');
-        micIcon.className = 'fas fa-microphone-slash icon';
-        toggleMicButton.classList.add('active');
-        toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
-
-        // Show the shared screen
+        // NÃO desabilite as tracks de áudio automaticamente!
+        // const audioTracks = localStream.getAudioTracks();
+        // audioTracks.forEach(track => { track.enabled = false; });
+        // isMicMuted = true;
+        // const micIcon = toggleMicButton.querySelector('.icon');
+        // micIcon.className = 'fas fa-microphone-slash icon';
+        // toggleMicButton.classList.add('active');
+        // toggleMicButton.querySelector('.tooltip').textContent = 'Unmute Microphone';
         sharedScreen.srcObject = localStream;
         await sharedScreen.play();
-
         const remoteId = remoteIdInput.value.trim();
         if (!remoteId) {
           alert("Please enter a Remote ID to share your screen.");
           return;
         }
-
         const call = peer.call(remoteId, localStream);
         currentCall = call;
-
-        // Update UI
         shareScreenButton.style.display = 'none';
         stopSharingButton.style.display = 'flex';
-
         call.on("close", () => {
           console.log("Call closed.");
           stopSharing();
         });
-
-        // Handle stream end
+        call.on("stream", (stream) => {
+          if (!localStream) {
+            localStream = stream;
+          }
+          startCallTimer();
+        });
         displayStream.getVideoTracks()[0].onended = () => {
           stopSharing();
         };
@@ -904,27 +916,47 @@
     }
 
     // Recording functions
+    function showRecordingWarning() {
+      if (document.getElementById('recording-warning')) return;
+      const warning = document.createElement('div');
+      warning.id = 'recording-warning';
+      warning.style.display = 'flex';
+      warning.style.alignItems = 'center';
+      warning.style.position = 'fixed';
+      warning.style.top = '18px';
+      warning.style.right = '18px';
+      warning.style.background = 'rgba(255,126,95,0.92)';
+      warning.style.color = 'white';
+      warning.style.padding = '6px 16px';
+      warning.style.borderRadius = '6px';
+      warning.style.zIndex = '2000';
+      warning.style.fontSize = '13px';
+      warning.style.boxShadow = '0 2px 8px rgba(0,0,0,0.10)';
+      warning.style.maxWidth = '260px';
+      warning.innerHTML = '<span style="margin-right:8px;">Esta conversa está sendo gravada.</span>' +
+        '<button id="dismiss-warning" style="background:none;border:none;color:white;font-size:15px;cursor:pointer;padding:0 4px;line-height:1;">&times;</button>';
+      document.body.appendChild(warning);
+      document.getElementById('dismiss-warning').onclick = function() {
+        warning.style.display = 'none';
+      };
+    }
+
     function startRecording() {
-      if (!localStream) {
-        alert("Please start screen sharing first");
-        return;
-      }
-
+      if (!localStream) return;
+      showRecordingWarning();
       recordedChunks = [];
-      mediaRecorder = new MediaRecorder(localStream, {
-        mimeType: 'video/webm;codecs=vp9'
-      });
-
+      mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm;codecs=vp9' });
+      console.log('MediaRecorder:', mediaRecorder);
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           recordedChunks.push(event.data);
         }
       };
-
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, {
-          type: 'video/webm'
-        });
+        recordingEndTime = Date.now();
+        const duration = ((recordingEndTime - recordingStartTime) / 1000).toFixed(2);
+        console.log('Duração da gravação:', duration, 'segundos');
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         document.body.appendChild(a);
@@ -935,10 +967,11 @@
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       };
-
       mediaRecorder.start();
+      recordingStartTime = Date.now();
       isRecording = true;
-      recordButton.classList.add('active');
+      const recordButton = document.getElementById('record');
+      recordButton.classList.add('active', 'recording');
       recordButton.querySelector('.icon').className = 'fas fa-stop-circle icon';
       recordButton.querySelector('.tooltip').textContent = 'Stop Recording';
     }
@@ -947,20 +980,12 @@
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
         isRecording = false;
-        recordButton.classList.remove('active');
+        const recordButton = document.getElementById('record');
+        recordButton.classList.remove('active', 'recording');
         recordButton.querySelector('.icon').className = 'fas fa-circle icon';
         recordButton.querySelector('.tooltip').textContent = 'Start Recording';
       }
     }
-
-    // Update record button click handler
-    recordButton.addEventListener('click', () => {
-      if (isRecording) {
-        stopRecording();
-      } else {
-        startRecording();
-      }
-    });
 
     // Stop sharing function
     function stopSharing() {
@@ -970,12 +995,10 @@
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
       }
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        stopRecording();
-      }
       sharedScreen.srcObject = null;
       shareScreenButton.style.display = 'flex';
       stopSharingButton.style.display = 'none';
+      stopCallTimer();
     }
 
     // Event listeners
@@ -983,19 +1006,23 @@
     shareScreenButton.addEventListener('click', shareScreen);
     stopSharingButton.addEventListener('click', stopSharing);
     connectButton.addEventListener('click', () => {
-      alert("Now click 'Share Screen' to start the call.");
+      startCallTimer();
     });
 
     // PeerJS event handlers
     peer.on("open", id => {
-      myIdDisplay.textContent = id;
+      if (myIdDisplay) myIdDisplay.textContent = id;
     });
 
     peer.on("call", incomingCall => {
-      incomingCall.answer(); // No stream needed for receiver
+      incomingCall.answer();
       incomingCall.on("stream", stream => {
         sharedScreen.srcObject = stream;
         sharedScreen.play();
+        if (!localStream) {
+          localStream = stream;
+        }
+        startCallTimer();
       });
     });
 
@@ -1006,6 +1033,13 @@
       }
       if (currentCall) {
         currentCall.close();
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        if (recordingStartTime) {
+          const duration = ((Date.now() - recordingStartTime) / 1000).toFixed(2);
+          console.log('Duração da gravação:', duration, 'segundos');
+        }
       }
     };
 
@@ -1158,6 +1192,87 @@
         }
       });
     })();
+
+    // Botão para sair da call
+    const leaveCallButton = document.getElementById('leave-call');
+    if (leaveCallButton) {
+      leaveCallButton.addEventListener('click', () => {
+        stopSharing();
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.onstop = () => {
+            recordingEndTime = Date.now();
+            const duration = ((recordingEndTime - recordingStartTime) / 1000).toFixed(2);
+            console.log('Duração da gravação:', duration, 'segundos');
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `recording-${new Date().toISOString()}.webm`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+          };
+          mediaRecorder.stop();
+        }
+      });
+    }
+
+    // Event listener do botão de gravação
+    const recordButton = document.getElementById('record');
+    recordButton.addEventListener('click', () => {
+      if (!localStream) {
+        alert('Nenhum stream disponível para gravar. Inicie uma chamada ou compartilhe a tela primeiro.');
+        return;
+      }
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+
+    function showRecordReminder() {
+      const reminder = document.getElementById('record-reminder');
+      reminder.style.display = 'flex';
+      document.getElementById('dismiss-reminder').onclick = function() {
+        reminder.style.display = 'none';
+      };
+    }
+
+    function hideRecordReminder() {
+      const reminder = document.getElementById('record-reminder');
+      reminder.style.display = 'none';
+    }
+
+    function startCallTimer() {
+      const timer = document.getElementById('call-timer');
+      timerStart = Date.now();
+      timer.style.display = 'flex';
+      timer.textContent = '00:00:00';
+      timerInterval = setInterval(() => {
+        const elapsed = Date.now() - timerStart;
+        const hours = String(Math.floor(elapsed / 3600000)).padStart(2, '0');
+        const minutes = String(Math.floor((elapsed % 3600000) / 60000)).padStart(2, '0');
+        const seconds = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
+        timer.textContent = `${hours}:${minutes}:${seconds}`;
+        // Mostrar reminder aos 5 minutos apenas se não estiver gravando
+        if (elapsed >= 0.3 * 60 * 1000 && !reminderTimeout && !isRecording) {
+          showRecordReminder();
+          reminderTimeout = true;
+        }
+      }, 1000);
+    }
+
+    function stopCallTimer() {
+      const timer = document.getElementById('call-timer');
+      timer.style.display = 'none';
+      clearInterval(timerInterval);
+      timer.textContent = '00:00:00';
+      hideRecordReminder();
+      reminderTimeout = null;
+    }
   </script>
 </body>
 </html>

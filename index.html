@@ -846,19 +846,15 @@
       }
     }
 
-    // Share screen function
+    // Função para iniciar o compartilhamento de tela tradicional
     async function shareScreen() {
       try {
-        // First get user media for audio
+        // Primeiro, obter o áudio do microfone
         const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Then get display media for screen sharing
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ 
-          video: true,
-          audio: true
-        });
+        // Depois, obter o display media
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
 
-        // Combine both streams
+        // Combinar ambos os streams
         localStream = new MediaStream([
           ...displayStream.getVideoTracks(),
           ...audioStream.getAudioTracks()
@@ -901,7 +897,6 @@
         displayStream.getVideoTracks()[0].onended = () => {
           stopSharing();
         };
-
       } catch (err) {
         console.error("Error sharing screen:", err);
         alert("Screen sharing failed: " + err.message);

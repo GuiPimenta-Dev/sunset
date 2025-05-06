@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sunset - Screen Share</title>
+  <style>
+    :root {
+      --sunset-orange: #ff7e5f;
+      --sunset-purple: #feb47b;
+      --discord-dark: #36393f;
+      --discord-darker: #2f3136;
+      --discord-darkest: #202225;
+      --text-primary: #ffffff;
+      --text-secondary: #b9bbbe;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--discord-darkest), var(--discord-darker));
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(45deg, var(--sunset-orange), var(--sunset-purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .controls {
+      background: var(--discord-dark);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin: 20px 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    #my-id {
+      color: var(--sunset-orange);
+      font-weight: bold;
+      font-family: 'Consolas', monospace;
+      background: var(--discord-darker);
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: inline-block;
+      margin: 10px 0;
+    }
+
+    input {
+      background: var(--discord-darker);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+      padding: 12px 16px;
+      border-radius: 8px;
+      width: 300px;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--sunset-orange);
+      box-shadow: 0 0 0 2px rgba(255, 126, 95, 0.2);
+    }
+
+    button {
+      background: linear-gradient(45deg, var(--sunset-orange), var(--sunset-purple));
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.9rem;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 126, 95, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    #shared-screen {
+      width: 90%;
+      max-width: 1200px;
+      border-radius: 12px;
+      margin: 20px auto;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      background: var(--discord-darkest);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px 10px;
+      }
+
+      input {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      button {
+        width: 100%;
+        margin: 5px 0;
+      }
+
+      #shared-screen {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PeerJS Screen Share</h1>
+
+    <div class="controls">
+      <p><strong>Your ID:</strong> <span id="my-id"></span></p>
+      <input type="text" id="remote-id" placeholder="Remote Peer ID" />
+      <button id="connect">Connect</button>
+      <button id="share-screen">Share Screen</button>
+    </div>
+
+    <video id="shared-screen" autoplay playsinline></video>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script>
+    const myIdDisplay = document.getElementById("my-id");
+    const remoteIdInput = document.getElementById("remote-id");
+    const sharedScreen = document.getElementById("shared-screen");
+
+    const peer = new Peer();
+
+    let localStream = null;
+    let currentCall = null;
+
+    peer.on("open", id => {
+      myIdDisplay.textContent = id;
+    });
+
+    document.getElementById("connect").onclick = () => {
+      alert("Now click 'Share Screen' to start the call.");
+    };
+
+    document.getElementById("share-screen").onclick = async () => {
+      try {
+        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+
+        // Show the shared screen
+        sharedScreen.srcObject = localStream;
+        sharedScreen.play();
+
+        const remoteId = remoteIdInput.value.trim();
+        if (!remoteId) {
+          alert("Please enter a Remote ID to share your screen.");
+          return;
+        }
+
+        const call = peer.call(remoteId, localStream);
+        currentCall = call;
+
+        call.on("close", () => {
+          console.log("Call closed.");
+        });
+      } catch (err) {
+        console.error("Error sharing screen:", err);
+        alert("Screen sharing failed: " + err.message);
+      }
+    };
+
+    peer.on("call", incomingCall => {
+      incomingCall.answer(); // No stream needed for receiver
+      incomingCall.on("stream", stream => {
+        sharedScreen.srcObject = stream;
+        sharedScreen.play();
+      });
+    });
+  </script>
+</body>
+</html>

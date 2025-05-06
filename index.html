@@ -320,30 +320,28 @@
 
     .notes-content {
       flex: 1;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
     }
 
-    .EasyMDEContainer {
-      height: 100%;
-    }
-
-    .EasyMDEContainer .editor-toolbar {
+    .editor-toolbar {
       background: var(--discord-darker);
       border: none;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 8px;
-      gap: 8px;
+      padding: 4px;
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      min-height: 50px;
+      gap:0;
+      flex-wrap: nowrap;
+      min-height: 40px;
     }
 
-    .EasyMDEContainer .editor-toolbar button {
+    .toolbar-button {
       color: var(--text-secondary);
       border: none;
       background: transparent;
-      padding: 6px 8px;
+      padding: 4px;
       border-radius: 4px;
       transition: all 0.2s ease;
       position: relative;
@@ -351,30 +349,30 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 30px;
-      height: 30px;
+      min-width: 10px;
+      height: 24px;
+      cursor: pointer;
+      margin: 0 1px;
     }
 
-    .EasyMDEContainer .editor-toolbar button:hover {
+    .toolbar-button:hover {
+      background: transparent;
+      color: var(--text-primary);
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      border: none;
+      padding: 4px;
+    }
+
+    .toolbar-button.active {
       background: var(--sunset-orange);
       color: white;
-      transform: translateY(-1px);
     }
 
-    .EasyMDEContainer .editor-toolbar button:active {
-      transform: translateY(0);
-    }
-
-    .EasyMDEContainer .editor-toolbar button.active,
-    .EasyMDEContainer .editor-toolbar button.preview-active {
-      background: var(--sunset-orange);
-      color: white;
-    }
-
-    .EasyMDEContainer .editor-toolbar button::after {
+    .toolbar-button::after {
       content: attr(title);
       position: absolute;
-      bottom: -30px;
+      bottom: -25px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0, 0, 0, 0.8);
@@ -389,35 +387,146 @@
       z-index: 1000;
     }
 
-    .EasyMDEContainer .editor-toolbar button::before {
-      content: '';
+    .toolbar-button:hover::after {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .editor-area {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .markdown-editor {
+      flex: 1;
+      background: var(--discord-dark);
+      color: var(--text-primary);
+      border: none;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 16px;
+      resize: none;
+      outline: none;
+      font-family: 'Consolas', monospace;
+    }
+
+    .markdown-preview {
+      flex: 1;
+      background: var(--discord-dark);
+      color: var(--text-primary);
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .markdown-preview.active {
+      display: block;
+    }
+
+    .markdown-preview h1 {
+      color: var(--sunset-orange);
+      font-size: 2em;
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-preview h2 {
+      color: var(--sunset-purple);
+      font-size: 1.5em;
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-preview strong {
+      color: var(--sunset-orange);
+    }
+
+    .markdown-preview em {
+      color: var(--sunset-purple);
+    }
+
+    .notes-panel.fullscreen {
+      width: 100%;
+      right: 0;
+    }
+
+    .notes-header .toolbar-button {
+      margin-left: 4px;
+    }
+
+    .EasyMDEContainer .editor-toolbar {
+      background: var(--discord-darker);
+      border: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      min-height: 40px;
+      gap: 4px;
+    }
+
+    .EasyMDEContainer .editor-toolbar .format-group {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      padding-right: 4px;
+    }
+
+    .EasyMDEContainer .editor-toolbar .format-group:last-child {
+      border-right: none;
+      padding-right: 0;
+    }
+
+    .EasyMDEContainer .editor-toolbar button {
+      color: var(--text-secondary);
+      border: none;
+      background: transparent;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      position: relative;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+    }
+
+    .EasyMDEContainer .editor-toolbar button:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+    }
+
+    .EasyMDEContainer .editor-toolbar button.active {
+      background: var(--sunset-orange);
+      color: white;
+    }
+
+    .EasyMDEContainer .editor-toolbar button::after {
+      content: attr(title);
       position: absolute;
-      bottom: -10px;
+      bottom: -25px;
       left: 50%;
       transform: translateX(-50%);
-      border-width: 5px;
-      border-style: solid;
-      border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
       opacity: 0;
       visibility: hidden;
       transition: all 0.2s ease;
       z-index: 1000;
     }
 
-    .EasyMDEContainer .editor-toolbar button:hover::before,
     .EasyMDEContainer .editor-toolbar button:hover::after {
       opacity: 1;
       visibility: visible;
-    }
-
-    .EasyMDEContainer .editor-toolbar i.separator {
-      border: none;
-      font-size: 0;
-      width: 1px;
-      height: 20px;
-      background: rgba(255, 255, 255, 0.1);
-      margin: 0 4px;
-      padding: 0;
     }
 
     .EasyMDEContainer .CodeMirror {
@@ -527,6 +636,41 @@
     .EasyMDEContainer .editor-preview-active {
       background: var(--discord-dark);
     }
+
+    /* CSS for drag handle */
+    .notes-drag-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      cursor: ew-resize;
+      z-index: 1001;
+      background: transparent;
+      transition: background 0.2s;
+    }
+    .notes-drag-handle:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    .notes-panel {
+      resize: none !important;
+      min-width: 280px;
+      max-width: 100vw;
+    }
+    .notes-panel .editor-toolbar .toolbar-button {
+      background-color: transparent !important;
+      box-shadow: none;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      padding: 4px; /* Garante que padding seja fixo */
+      transition: box-shadow 0.2s ease, color 0.2s ease;
+    }
+    
+    .notes-panel .editor-toolbar .toolbar-button:hover {
+      background-color: transparent !important;
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+      color: var(--text-primary);
+    }
   </style>
 </head>
 <body>
@@ -567,14 +711,67 @@
   </div>
 
   <div class="notes-panel">
+    <div class="notes-drag-handle"></div>
     <div class="notes-header">
       <span class="notes-title">Notes</span>
-      <button class="notes-close" title="Close Notes">
-        <i class="fas fa-times"></i>
-      </button>
+      <div>
+        <button class="toolbar-button" title="Visualizar" onclick="togglePreview()">
+          <i class="fa fa-eye"></i>
+        </button>
+        <button class="toolbar-button" title="Tela Cheia" onclick="toggleFullscreen()">
+          <i class="fa fa-expand"></i>
+        </button>
+        <button class="notes-close" title="Close Notes">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
     </div>
     <div class="notes-content">
-      <textarea id="notes-editor"></textarea>
+      <div class="editor-toolbar">
+        <button class="toolbar-button" title="Título Principal" onclick="formatText('# ')">
+          <i class="fa fa-header"></i>
+        </button>
+        <button class="toolbar-button" title="Subtítulo" onclick="formatText('## ')">
+          <i class="fa fa-header fa-sm"></i>
+        </button>
+        <button class="toolbar-button" title="Negrito" onclick="formatText('**', '**')">
+          <i class="fa fa-bold"></i>
+        </button>
+        <button class="toolbar-button" title="Itálico" onclick="formatText('*', '*')">
+          <i class="fa fa-italic"></i>
+        </button>
+        <button class="toolbar-button" title="Lista não ordenada" onclick="formatText('- ')">
+          <i class="fa fa-list-ul"></i>
+        </button>
+        <button class="toolbar-button" title="Lista ordenada" onclick="formatText('1. ')">
+          <i class="fa fa-list-ol"></i>
+        </button>
+        <button class="toolbar-button" title="Lista de tarefas" onclick="formatText('- [ ] ')">
+          <i class="fa fa-tasks"></i>
+        </button>
+        <button class="toolbar-button" title="Link" onclick="formatText('[', '](url)')">
+          <i class="fa fa-link"></i>
+        </button>
+        <button class="toolbar-button" title="Imagem" onclick="formatText('![', '](url)')">
+          <i class="fa fa-image"></i>
+        </button>
+        <button class="toolbar-button" title="Citação" onclick="formatText('> ')">
+          <i class="fa fa-quote-left"></i>
+        </button>
+        <button class="toolbar-button" title="Código" onclick="formatText('`', '`')">
+          <i class="fa fa-code"></i>
+        </button>
+        <button class="toolbar-button" title="Bloco de código" onclick="formatText('```\n', '\n```')">
+          <i class="fa fa-file-code"></i>
+        </button>
+        <button class="toolbar-button" title="Linha horizontal" onclick="formatText('\n---\n')">
+          <i class="fa fa-minus"></i>
+        </button>
+      </div>
+      <div class="editor-area">
+        <textarea id="markdown-editor" class="markdown-editor" placeholder="Anote aqui os tópicos importantes da reunião..."></textarea>
+        <div id="markdown-preview" class="markdown-preview"></div>
+      </div>
     </div>
   </div>
 
@@ -817,112 +1014,104 @@
       }
     };
 
-    // Initialize Markdown editor
-    function initMarkdownEditor() {
-      if (!easyMDE) {
-        easyMDE = new EasyMDE({
-          element: document.getElementById('notes-editor'),
-          spellChecker: false,
-          status: false,
-          toolbar: [
-            {
-              name: "heading-1",
-              action: function customHeading1(editor) {
-                editor.toggleHeading1();
-              },
-              className: "fa fa-header",
-              title: "Título Principal",
-            },
-            {
-              name: "heading-2",
-              action: function customHeading2(editor) {
-                editor.toggleHeading2();
-              },
-              className: "fa fa-header fa-sm",
-              title: "Subtítulo",
-            },
-            {
-              name: "bold",
-              action: function customBold(editor) {
-                editor.toggleBold();
-              },
-              className: "fa fa-bold",
-              title: "Negrito",
-            },
-            {
-              name: "italic",
-              action: function customItalic(editor) {
-                editor.toggleItalic();
-              },
-              className: "fa fa-italic",
-              title: "Itálico",
-            },
-            {
-              name: "preview",
-              action: function customPreview(editor) {
-                const previewButton = editor.toolbarElements.preview;
-                if (editor.isPreviewActive()) {
-                  editor.togglePreview();
-                  previewButton.classList.remove('preview-active');
-                } else {
-                  editor.togglePreview();
-                  previewButton.classList.add('preview-active');
-                }
-              },
-              className: "fa fa-eye",
-              title: "Visualizar",
-            },
-            {
-              name: "fullscreen",
-              action: function customFullscreen(editor) {
-                editor.toggleFullScreen();
-              },
-              className: "fa fa-expand",
-              title: "Tela Cheia",
-            }
-          ],
-          theme: 'dark',
-          autofocus: false,
-          placeholder: 'Anote aqui os tópicos importantes da reunião...\n\nDicas:\n- Use # para títulos principais\n- Use ## para subtítulos\n- Use **texto** para negrito\n- Use *texto* para itálico',
-          autoDownloadFontAwesome: false,
-          shortcuts: {
-            'heading-1': 'Ctrl-1',
-            'heading-2': 'Ctrl-2',
-            'bold': 'Ctrl-B',
-            'italic': 'Ctrl-I',
-            'preview': 'Ctrl-P',
-            'fullscreen': 'F11'
-          }
-        });
-
-        // Set default template if no saved notes
-        const savedNotes = localStorage.getItem('meeting-notes');
-        if (!savedNotes) {
-          easyMDE.value(defaultTemplate);
-        } else {
-          easyMDE.value(savedNotes);
+    // Markdown editor functions
+    function formatText(prefix, suffix = '') {
+      const editor = document.getElementById('markdown-editor');
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const text = editor.value;
+      const selectedText = text.substring(start, end);
+      
+      if (prefix === '[' && suffix === '](url)') {
+        const url = prompt('Digite a URL do link:');
+        if (url) {
+          editor.value = text.substring(0, start) + `[${selectedText || 'texto do link'}](${url})` + text.substring(end);
+          editor.focus();
+          editor.setSelectionRange(start + (selectedText ? selectedText.length : 13) + 3, start + (selectedText ? selectedText.length : 13) + url.length + 3);
         }
-
-        // Save notes to localStorage
-        easyMDE.codemirror.on('change', () => {
-          localStorage.setItem('meeting-notes', easyMDE.value());
-        });
-
-        // Handle preview toggle
-        easyMDE.codemirror.on('change', () => {
-          const previewButton = easyMDE.toolbarElements.preview;
-          if (!easyMDE.isPreviewActive()) {
-            previewButton.classList.remove('preview-active');
-          }
-        });
+      } else if (prefix === '![' && suffix === '](url)') {
+        const url = prompt('Digite a URL da imagem:');
+        if (url) {
+          editor.value = text.substring(0, start) + `![${selectedText || 'descrição'}](${url})` + text.substring(end);
+          editor.focus();
+          editor.setSelectionRange(start + (selectedText ? selectedText.length : 9) + 4, start + (selectedText ? selectedText.length : 9) + url.length + 4);
+        }
+      } else {
+        editor.value = text.substring(0, start) + prefix + selectedText + suffix + text.substring(end);
+        editor.focus();
+        editor.setSelectionRange(start + prefix.length, end + prefix.length);
       }
+    }
+
+    function togglePreview() {
+      const editor = document.getElementById('markdown-editor');
+      const preview = document.getElementById('markdown-preview');
+      const previewButton = document.querySelector('.toolbar-button[title="Visualizar"]');
+      
+      if (preview.classList.contains('active')) {
+        preview.classList.remove('active');
+        editor.style.display = 'block';
+        previewButton.classList.remove('active');
+      } else {
+        preview.classList.add('active');
+        editor.style.display = 'none';
+        previewButton.classList.add('active');
+        updatePreview();
+      }
+    }
+
+    function updatePreview() {
+      const editor = document.getElementById('markdown-editor');
+      const preview = document.getElementById('markdown-preview');
+      const text = editor.value;
+      
+      // Simple markdown conversion
+      let html = text
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
+        .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%;">')
+        .replace(/^- \[ \] (.*$)/gm, '<div class="task-item"><input type="checkbox"> $1</div>')
+        .replace(/^- \[x\] (.*$)/gm, '<div class="task-item"><input type="checkbox" checked> $1</div>')
+        .replace(/^- (.*$)/gm, '<li>$1</li>')
+        .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+        .replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/```\n([\s\S]*?)\n```/g, '<pre><code>$1</code></pre>')
+        .replace(/\n/g, '<br>');
+      
+      // Wrap lists
+      html = html.replace(/<li>.*?<\/li>/g, function(match) {
+        return '<ul>' + match + '</ul>';
+      });
+      
+      preview.innerHTML = html;
+    }
+
+    // Initialize notes
+    function initNotes() {
+      const editor = document.getElementById('markdown-editor');
+      const savedNotes = localStorage.getItem('meeting-notes');
+      
+      if (savedNotes) {
+        editor.value = savedNotes;
+      }
+
+      editor.addEventListener('input', () => {
+        localStorage.setItem('meeting-notes', editor.value);
+        if (document.getElementById('markdown-preview').classList.contains('active')) {
+          updatePreview();
+        }
+      });
     }
 
     // Toggle notes panel
     notesButton.addEventListener('click', () => {
       notesPanel.classList.toggle('active');
       if (notesPanel.classList.contains('active')) {
-        initMarkdownEditor();
+        initNotes();
       }
     });
 
@@ -930,6 +1119,50 @@
     notesClose.addEventListener('click', () => {
       notesPanel.classList.remove('active');
     });
+
+    function toggleFullscreen() {
+      const notesPanel = document.querySelector('.notes-panel');
+      const fullscreenButton = document.querySelector('.toolbar-button[title="Tela Cheia"]');
+      
+      if (notesPanel.classList.contains('fullscreen')) {
+        notesPanel.classList.remove('fullscreen');
+        fullscreenButton.querySelector('i').className = 'fa fa-expand';
+      } else {
+        notesPanel.classList.add('fullscreen');
+        fullscreenButton.querySelector('i').className = 'fa fa-compress';
+      }
+    }
+
+    // JS for drag-to-resize
+    (function() {
+      const notesPanel = document.querySelector('.notes-panel');
+      const dragHandle = document.querySelector('.notes-drag-handle');
+      let isDragging = false;
+      let startX = 0;
+      let startWidth = 0;
+
+      dragHandle.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        startX = e.clientX;
+        startWidth = notesPanel.offsetWidth;
+        document.body.style.userSelect = 'none';
+      });
+
+      window.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        const dx = startX - e.clientX;
+        let newWidth = startWidth + dx;
+        newWidth = Math.max(280, Math.min(window.innerWidth, newWidth));
+        notesPanel.style.width = newWidth + 'px';
+      });
+
+      window.addEventListener('mouseup', function() {
+        if (isDragging) {
+          isDragging = false;
+          document.body.style.userSelect = '';
+        }
+      });
+    })();
   </script>
 </body>
 </html>
